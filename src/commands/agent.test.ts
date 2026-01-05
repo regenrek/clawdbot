@@ -56,6 +56,7 @@ function mockConfig(
   routingOverrides?: Partial<NonNullable<ClawdbotConfig["routing"]>>,
   agentOverrides?: Partial<NonNullable<ClawdbotConfig["agent"]>>,
   telegramOverrides?: Partial<NonNullable<ClawdbotConfig["telegram"]>>,
+  sessionOverrides?: Partial<NonNullable<ClawdbotConfig["session"]>>,
 ) {
   configSpy.mockReturnValue({
     agent: {
@@ -63,7 +64,7 @@ function mockConfig(
       workspace: path.join(home, "clawd"),
       ...agentOverrides,
     },
-    session: { store: storePath, mainKey: "main" },
+    session: { store: storePath, mainKey: "main", ...sessionOverrides },
     routing: routingOverrides ? { ...routingOverrides } : undefined,
     telegram: telegramOverrides ? { ...telegramOverrides } : undefined,
   });
@@ -266,6 +267,48 @@ describe("agentCommand", () => {
           process.env.TELEGRAM_BOT_TOKEN = prevTelegramToken;
         }
       }
+    });
+  });
+
+  it("evaluates send policy against delivery provider", async () => {
+    await withTempHome(async (home) => {
+      const store = path.join(home, "sessions.json");
+      mockConfig(
+        home,
+        store,
+        undefined,
+        undefined,
+        undefined,
+        {
+          sendPolicy: {
+            default: "deny",
+            rules: [{ action: "allow", match: { surface: "rocketchat" } }],
+          },
+        },
+      );
+      const deps = {
+        sendMessageWhatsApp: vi.fn(),
+        sendMessageTelegram: vi.fn(),
+        sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi
+          .fn()
+          .mockResolvedValue({ messageId: "m1", roomId: "r1" }),
+        sendMessageSignal: vi.fn(),
+        sendMessageIMessage: vi.fn(),
+      };
+
+      await agentCommand(
+        {
+          message: "hi",
+          to: "#general",
+          deliver: true,
+          provider: "rocketchat",
+        },
+        runtime,
+        deps as any,
+      );
+
+      expect(deps.sendMessageRocketChat).toHaveBeenCalledWith("#general", "ok");
     });
   });
 });

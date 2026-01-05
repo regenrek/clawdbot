@@ -47,6 +47,14 @@ import { resolveSendPolicy } from "../sessions/send-policy.js";
 import { resolveTelegramToken } from "../telegram/token.js";
 import { normalizeE164 } from "../utils.js";
 
+function normalizeSurface(raw?: string): string | undefined {
+  const value = raw?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (value === "imsg") return "imessage";
+  if (value === "rc" || value === "rocket.chat") return "rocketchat";
+  return value;
+}
+
 type AgentCommandOpts = {
   message: string;
   to?: string;
@@ -219,11 +227,12 @@ export async function agentCommand(
   }
 
   if (opts.deliver === true) {
+    const deliverySurface = normalizeSurface(opts.provider ?? "whatsapp");
     const sendPolicy = resolveSendPolicy({
       cfg,
       entry: sessionEntry,
       sessionKey,
-      surface: sessionEntry?.surface,
+      surface: deliverySurface ?? sessionEntry?.surface,
       chatType: sessionEntry?.chatType,
     });
     if (sendPolicy === "deny") {
@@ -359,12 +368,7 @@ export async function agentCommand(
   let fallbackModel = model;
   try {
     const surface =
-      opts.surface?.trim().toLowerCase() ||
-      (() => {
-        const raw = opts.provider?.trim().toLowerCase();
-        if (!raw) return undefined;
-        return raw === "imsg" ? "imessage" : raw;
-      })();
+      normalizeSurface(opts.surface) ?? normalizeSurface(opts.provider);
     const fallbackResult = await runWithModelFallback({
       cfg,
       provider,
@@ -476,13 +480,8 @@ export async function agentCommand(
   const payloads = result.payloads ?? [];
   const deliver = opts.deliver === true;
   const bestEffortDeliver = opts.bestEffortDeliver === true;
-  const deliveryProviderRaw = (opts.provider ?? "whatsapp").toLowerCase();
-  const deliveryProvider =
-    deliveryProviderRaw === "imsg"
-      ? "imessage"
-      : deliveryProviderRaw === "rc" || deliveryProviderRaw === "rocket.chat"
-        ? "rocketchat"
-        : deliveryProviderRaw;
+  const deliveryProvider = normalizeSurface(opts.provider ?? "whatsapp") ??
+    "whatsapp";
 
   const whatsappTarget = opts.to ? normalizeE164(opts.to) : allowFrom[0];
   const telegramTarget = opts.to?.trim() || undefined;
