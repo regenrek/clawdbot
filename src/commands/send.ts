@@ -86,6 +86,38 @@ export async function sendCommand(
     return;
   }
 
+  if (
+    provider === "rocketchat" ||
+    provider === "rocket.chat" ||
+    provider === "rc"
+  ) {
+    const result = await deps.sendMessageRocketChat(opts.to, opts.message, {
+      mediaUrl: opts.media,
+    });
+    runtime.log(
+      success(
+        `✅ Sent via rocketchat. Message ID: ${result.messageId}${result.roomId ? ` (room ${result.roomId})` : ""}`,
+      ),
+    );
+    if (opts.json) {
+      runtime.log(
+        JSON.stringify(
+          {
+            provider: "rocketchat",
+            via: "direct",
+            to: opts.to,
+            roomId: result.roomId ?? null,
+            messageId: result.messageId,
+            mediaUrl: opts.media ?? null,
+          },
+          null,
+          2,
+        ),
+      );
+    }
+    return;
+  }
+
   if (provider === "slack") {
     const result = await deps.sendMessageSlack(opts.to, opts.message, {
       mediaUrl: opts.media,

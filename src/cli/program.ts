@@ -317,11 +317,11 @@ export function buildProgram() {
   program
     .command("send")
     .description(
-      "Send a message (WhatsApp Web, Telegram bot, Discord, Slack, Signal, iMessage)",
+      "Send a message (WhatsApp Web, Telegram bot, Discord, Rocket.Chat, Slack, Signal, iMessage)",
     )
     .requiredOption(
       "-t, --to <number>",
-      "Recipient: E.164 for WhatsApp/Signal, Telegram chat id/@username, Discord channel/user, or iMessage handle/chat_id",
+      "Recipient: E.164 for WhatsApp/Signal, Telegram chat id/@username, Discord channel/user, Rocket.Chat #channel/@user/rid:roomId, or iMessage handle/chat_id",
     )
     .requiredOption("-m, --message <text>", "Message body")
     .option(
@@ -335,7 +335,7 @@ export function buildProgram() {
     )
     .option(
       "--provider <provider>",
-      "Delivery provider: whatsapp|telegram|discord|slack|signal|imessage (default: whatsapp)",
+      "Delivery provider: whatsapp|telegram|discord|rocketchat|slack|signal|imessage (default: whatsapp)",
     )
     .option("--dry-run", "Print payload and skip sending", false)
     .option("--json", "Output result as JSON", false)
@@ -378,7 +378,7 @@ Examples:
     .option("--verbose <on|off>", "Persist agent verbose level for the session")
     .option(
       "--provider <provider>",
-      "Delivery provider: whatsapp|telegram|discord|slack|signal|imessage (default: whatsapp)",
+      "Delivery provider: whatsapp|telegram|discord|rocketchat|slack|signal|imessage (default: whatsapp)",
     )
     .option(
       "--deliver",

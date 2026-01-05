@@ -349,6 +349,20 @@ export type SlackConfig = {
   channels?: Record<string, SlackChannelConfig>;
 };
 
+export type RocketChatConfig = {
+  /** If false, Rocket.Chat sends are disabled. Default: true. */
+  enabled?: boolean;
+  /** Base URL for the Rocket.Chat server (e.g. https://chat.example.com). */
+  baseUrl?: string;
+  /** X-User-Id for REST API requests. */
+  userId?: string;
+  /** X-Auth-Token for REST API requests (personal access token). */
+  authToken?: string;
+  /** Outbound text chunk size (chars). Default: 4000. */
+  textChunkLimit?: number;
+  mediaMaxMb?: number;
+};
+
 export type SignalConfig = {
   /** If false, do not start the Signal provider. Default: true. */
   enabled?: boolean;
@@ -837,6 +851,7 @@ export type ClawdbotConfig = {
   whatsapp?: WhatsAppConfig;
   telegram?: TelegramConfig;
   discord?: DiscordConfig;
+  rocketchat?: RocketChatConfig;
   slack?: SlackConfig;
   signal?: SignalConfig;
   imessage?: IMessageConfig;
