@@ -18,6 +18,15 @@ export function buildControlUiSection(
     string,
     WizardStepDefinition<WizardState, WizardContext>
   > = {};
+  const resolveTokenParam = (state: WizardState): string => {
+    const authMode = state.draftConfig.gateway?.auth?.mode ?? "off";
+    if (authMode !== "token") return "";
+    return state.gatewayToken ? `?token=${encodeURIComponent(state.gatewayToken)}` : "";
+  };
+  const resolveTokenValue = (state: WizardState): string | undefined => {
+    const authMode = state.draftConfig.gateway?.auth?.mode ?? "off";
+    return authMode === "token" ? state.gatewayToken : undefined;
+  };
 
   steps[ENTRY_ID] = {
     id: ENTRY_ID,
@@ -46,9 +55,15 @@ export function buildControlUiSection(
         port: state.gatewayPort,
         basePath: state.draftConfig.gateway?.controlUi?.basePath,
       });
-      return [`Web UI: ${links.httpUrl}`, `Gateway WS: ${links.wsUrl}`].join(
-        "\n",
-      );
+      const tokenParam = resolveTokenParam(state);
+      const authedUrl = tokenParam ? `${links.httpUrl}${tokenParam}` : undefined;
+      return [
+        `Web UI: ${links.httpUrl}`,
+        authedUrl ? `Web UI (with token): ${authedUrl}` : undefined,
+        `Gateway WS: ${links.wsUrl}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
     },
     next: () => "controlui.browser.check",
   };
@@ -88,7 +103,8 @@ export function buildControlUiSection(
         port: state.gatewayPort,
         basePath: state.draftConfig.gateway?.controlUi?.basePath,
       });
-      const opened = await openUrl(links.httpUrl);
+      const tokenParam = resolveTokenParam(state);
+      const opened = await openUrl(`${links.httpUrl}${tokenParam}`);
       if (!opened) {
         state.controlUi.browserSupported = false;
         ctx.context.runtime.error("Unable to open browser.");
@@ -106,7 +122,7 @@ export function buildControlUiSection(
       formatControlUiSshHint({
         port: state.gatewayPort,
         basePath: state.draftConfig.gateway?.controlUi?.basePath,
-        token: state.gatewayToken,
+        token: resolveTokenValue(state),
       }),
     next: () => nextId,
   };

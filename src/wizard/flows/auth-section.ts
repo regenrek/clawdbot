@@ -24,6 +24,7 @@ import {
 } from "../../commands/onboard-auth.js";
 import { openUrl } from "../../commands/onboard-helpers.js";
 import { applyOpenAICodexModelDefault } from "../../commands/openai-codex-model-default.js";
+import { sleep } from "../../utils.js";
 import type { WizardStepDefinition } from "../steps.js";
 import { toTrimmedString } from "../values.js";
 import { commitConfig } from "./apply.js";
@@ -44,6 +45,17 @@ function createDeferred<T>() {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+async function waitForOAuthUrl(
+  state: WizardState,
+  timeoutMs = 4000,
+): Promise<string | undefined> {
+  const started = Date.now();
+  while (!state.auth.oauth?.url && Date.now() - started < timeoutMs) {
+    await sleep(100);
+  }
+  return state.auth.oauth?.url;
 }
 
 async function startOAuthFlow(
@@ -68,7 +80,6 @@ async function startOAuthFlow(
           prompt: "Paste authorization code (code#state)",
         };
         await openUrl(url);
-        ctx.runtime.log(`Open: ${url}`);
       },
       async () => deferred.promise,
     );
@@ -84,11 +95,8 @@ async function startOAuthFlow(
             ? "Paste the redirect URL (or authorization code)"
             : "Paste authorization code (code#state)",
         };
-        if (remote) {
-          ctx.runtime.log(`Open this URL in your LOCAL browser:\n${url}`);
-        } else {
+        if (!remote) {
           await openUrl(url);
-          ctx.runtime.log(`Open: ${url}`);
         }
       },
       onPrompt: async (prompt) => {
@@ -268,10 +276,30 @@ export function buildAuthSection(
 
   steps["auth.oauth.code"] = {
     id: "auth.oauth.code",
+    type: "action",
+    onAnswer: async (_value, state, ctx) => {
+      const url = await waitForOAuthUrl(state);
+      if (url) {
+        ctx.context.runtime.log(`Open this URL in your local browser:\n${url}`);
+      } else {
+        ctx.context.runtime.log("Open the login URL shown in your browser.");
+      }
+      ctx.context.runtime.log("");
+    },
+    next: () => "auth.oauth.code.input",
+  };
+
+  steps["auth.oauth.code.input"] = {
+    id: "auth.oauth.code.input",
     type: "text",
-    message: (state) =>
-      state.auth.oauth?.prompt ?? "Paste authorization code (code#state)",
-    placeholder: (state) => state.auth.oauth?.url,
+    message: (state) => {
+      const prompt = state.auth.oauth?.prompt?.trim();
+      if (prompt && !prompt.includes("http") && prompt.length < 120) {
+        return prompt;
+      }
+      return "Paste authorization code (code#state)";
+    },
+    placeholder: () => "code#state",
     validate: (value) => (toTrimmedString(value) ? undefined : "Required"),
     onAnswer: (value, state) => {
       state.auth.oauth = {

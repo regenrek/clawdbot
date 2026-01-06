@@ -87,6 +87,11 @@ export type WizardState = {
     }>;
     envIndex: number;
   };
+  health?: {
+    ok: boolean;
+    error?: string;
+    canRestart?: boolean;
+  };
   controlUi: {
     browserSupported?: boolean;
     assetsOk?: boolean;

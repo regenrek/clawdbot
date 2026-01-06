@@ -64,7 +64,9 @@ export function buildDaemonSection(
     onAnswer: async (_value, state) => {
       const service = resolveGatewayService();
       await service.restart({ stdout: process.stdout });
-      state.daemon = { ...state.daemon, needsLinger: true };
+      if (process.platform === "linux") {
+        state.daemon = { ...state.daemon, needsLinger: true };
+      }
     },
     next: () => "daemon.linger.check",
   };
@@ -111,7 +113,9 @@ export function buildDaemonSection(
         workingDirectory,
         environment,
       });
-      state.daemon = { ...state.daemon, needsLinger: true };
+      if (process.platform === "linux") {
+        state.daemon = { ...state.daemon, needsLinger: true };
+      }
     },
     next: () => "daemon.linger.check",
   };
@@ -122,7 +126,10 @@ export function buildDaemonSection(
     title: "Systemd",
     message: "Checking systemd lingering.",
     onAnswer: async (_value, state) => {
-      if (process.platform !== "linux") return;
+      if (process.platform !== "linux") {
+        state.daemon = { ...state.daemon, needsLinger: false };
+        return;
+      }
       const status = await readSystemdUserLingerStatus(process.env);
       if (!status || status.linger === "yes") {
         state.daemon = { ...state.daemon, needsLinger: false };
@@ -149,10 +156,14 @@ export function buildDaemonSection(
 
   steps["daemon.linger.confirm"] = {
     id: "daemon.linger.confirm",
-    type: "confirm",
+    type: "select",
     message: (state) =>
       `Enable systemd lingering for ${state.daemon?.lingerUser ?? "user"}?`,
     initialValue: () => true,
+    options: () => [
+      { value: true, label: "Yes (recommended on Linux)" },
+      { value: false, label: "No" },
+    ],
     next: (value) => (value ? "daemon.linger.enable" : nextId),
   };
 

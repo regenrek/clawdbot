@@ -190,9 +190,18 @@ export function buildGatewaySection(
 
   steps["gateway.tailscale.reset"] = {
     id: "gateway.tailscale.reset",
-    type: "confirm",
-    message:
-      "Turn off Tailscale Serve/Funnel when the gateway stops?\nYes: turns off Tailscale Serve/Funnel when gateway stops.\nNo: leaves it configured so it stays reachable after restarts.",
+    type: "select",
+    message: "Turn off Tailscale Serve/Funnel when the gateway stops?",
+    options: () => [
+      {
+        value: true,
+        label: "Yes - turns off Tailscale Serve/Funnel when gateway stops.",
+      },
+      {
+        value: false,
+        label: "No - leaves it configured so it stays reachable after restarts.",
+      },
+    ],
     initialValue: () => false,
     onAnswer: (value, state) => {
       state.draftConfig = {
