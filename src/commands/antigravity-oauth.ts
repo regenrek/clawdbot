@@ -106,6 +106,14 @@ function generatePKCESync(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
+export function startAntigravityOAuthSession(): {
+  url: string;
+  verifier: string;
+} {
+  const { verifier, challenge } = generatePKCESync();
+  return { url: buildAuthUrl(challenge, verifier), verifier };
+}
+
 /**
  * Build the Antigravity OAuth authorization URL.
  */
@@ -157,6 +165,20 @@ function parseCallbackInput(
     }
     return { code: trimmed, state: expectedState };
   }
+}
+
+export async function exchangeAntigravityOAuth(
+  input: string,
+  verifier: string,
+): Promise<OAuthCredentials> {
+  const parsed = parseCallbackInput(input, verifier);
+  if ("error" in parsed) {
+    throw new Error(parsed.error);
+  }
+  if (parsed.state !== verifier) {
+    throw new Error("OAuth state mismatch - please try again");
+  }
+  return exchangeCodeForTokens(parsed.code, verifier);
 }
 
 /**
@@ -358,8 +380,7 @@ export async function loginAntigravityManual(
   onUrl: (url: string) => void | Promise<void>,
   onProgress?: (message: string) => void,
 ): Promise<OAuthCredentials | null> {
-  const { verifier, challenge } = generatePKCESync();
-  const authUrl = buildAuthUrl(challenge, verifier);
+  const { verifier, url: authUrl } = startAntigravityOAuthSession();
 
   // Show the URL to the user
   await onUrl(authUrl);
@@ -382,17 +403,6 @@ export async function loginAntigravityManual(
 
   const callbackInput = await promptInput("Paste the redirect URL here: ");
 
-  const parsed = parseCallbackInput(callbackInput, verifier);
-  if ("error" in parsed) {
-    throw new Error(parsed.error);
-  }
-
-  // Verify state matches
-  if (parsed.state !== verifier) {
-    throw new Error("OAuth state mismatch - please try again");
-  }
-
   onProgress?.("Exchanging authorization code for tokens...");
-
-  return exchangeCodeForTokens(parsed.code, verifier);
+  return exchangeAntigravityOAuth(callbackInput, verifier);
 }

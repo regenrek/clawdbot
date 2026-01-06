@@ -17,7 +17,13 @@ struct OnboardingWizardStepViewTests {
             placeholder: nil,
             sensitive: nil,
             executor: nil)
-        let view = OnboardingWizardStepView(step: step, isSubmitting: false, onSubmit: { _ in })
+        let view = OnboardingWizardStepView(
+            step: step,
+            isSubmitting: false,
+            canGoBack: false,
+            onSubmit: { _ in },
+            onBack: {},
+            onExit: {})
         _ = view.body
     }
 
@@ -36,7 +42,13 @@ struct OnboardingWizardStepViewTests {
             placeholder: nil,
             sensitive: nil,
             executor: nil)
-        let view = OnboardingWizardStepView(step: step, isSubmitting: false, onSubmit: { _ in })
+        let view = OnboardingWizardStepView(
+            step: step,
+            isSubmitting: false,
+            canGoBack: false,
+            onSubmit: { _ in },
+            onBack: {},
+            onExit: {})
         _ = view.body
     }
 }

@@ -192,6 +192,53 @@ export type ConfigSchemaResponse = {
   generatedAt: string;
 };
 
+export type WizardStepOption = {
+  value: unknown;
+  label: string;
+  hint?: string;
+};
+
+export type WizardStep = {
+  id: string;
+  type:
+    | "note"
+    | "select"
+    | "text"
+    | "confirm"
+    | "multiselect"
+    | "progress"
+    | "action";
+  title?: string;
+  message?: string;
+  options?: WizardStepOption[];
+  initialValue?: unknown;
+  placeholder?: string;
+  sensitive?: boolean;
+  executor?: "gateway" | "client";
+};
+
+export type WizardStartResult = {
+  sessionId: string;
+  done: boolean;
+  step?: WizardStep;
+  canGoBack?: boolean;
+  status?: string;
+  error?: string;
+};
+
+export type WizardNextResult = {
+  done: boolean;
+  step?: WizardStep;
+  canGoBack?: boolean;
+  status?: string;
+  error?: string;
+};
+
+export type WizardStatusResult = {
+  status: string;
+  error?: string;
+};
+
 export type PresenceEntry = {
   instanceId?: string | null;
   host?: string | null;

@@ -33,6 +33,8 @@ final class OnboardingWizardModel {
     private(set) var currentStep: WizardStep?
     private(set) var status: String?
     private(set) var errorMessage: String?
+    private(set) var canGoBack = false
+    private(set) var stepToken = 0
     var isStarting = false
     var isSubmitting = false
 
@@ -44,6 +46,8 @@ final class OnboardingWizardModel {
         self.currentStep = nil
         self.status = nil
         self.errorMessage = nil
+        self.canGoBack = false
+        self.stepToken = 0
         self.isStarting = false
         self.isSubmitting = false
     }
@@ -72,27 +76,19 @@ final class OnboardingWizardModel {
     }
 
     func submit(step: WizardStep, value: AnyCodable?) async {
-        guard let sessionId, !self.isSubmitting else { return }
-        self.isSubmitting = true
-        self.errorMessage = nil
-        defer { self.isSubmitting = false }
-
-        do {
-            var params: [String: AnyCodable] = ["sessionId": AnyCodable(sessionId)]
-            var answer: [String: AnyCodable] = ["stepId": AnyCodable(step.id)]
-            if let value {
-                answer["value"] = value
-            }
-            params["answer"] = AnyCodable(answer)
-            let res: WizardNextResult = try await GatewayConnection.shared.requestDecoded(
-                method: .wizardNext,
-                params: params)
-            self.applyNextResult(res)
-        } catch {
-            self.status = "error"
-            self.errorMessage = error.localizedDescription
-            onboardingWizardLogger.error("submit failed: \(error.localizedDescription, privacy: .public)")
+        var answer: [String: AnyCodable] = ["stepId": AnyCodable(step.id)]
+        if let value {
+            answer["value"] = value
         }
+        await self.requestNext(params: ["answer": AnyCodable(answer)])
+    }
+
+    func goBack() async {
+        await self.requestNext(params: ["nav": AnyCodable("back")])
+    }
+
+    func exitWizard() async {
+        await self.requestNext(params: ["nav": AnyCodable("cancel")])
     }
 
     func cancelIfRunning() async {
@@ -114,18 +110,30 @@ final class OnboardingWizardModel {
         self.status = anyCodableStringValue(res.status) ?? (res.done ? "done" : "running")
         self.errorMessage = res.error
         self.currentStep = decodeWizardStep(res.step)
-        if res.done { self.currentStep = nil }
+        self.canGoBack = res.cangoback ?? false
+        if self.currentStep != nil {
+            self.stepToken += 1
+        }
+        if res.done {
+            self.currentStep = nil
+            self.canGoBack = false
+        }
     }
 
     private func applyNextResult(_ res: WizardNextResult) {
         self.status = anyCodableStringValue(res.status) ?? self.status
         self.errorMessage = res.error
         self.currentStep = decodeWizardStep(res.step)
+        self.canGoBack = res.cangoback ?? false
+        if self.currentStep != nil {
+            self.stepToken += 1
+        }
         if res.done { self.currentStep = nil }
         if res.done || anyCodableStringValue(res.status) == "done" || anyCodableStringValue(res.status) == "cancelled"
             || anyCodableStringValue(res.status) == "error"
         {
             self.sessionId = nil
+            self.canGoBack = false
         }
     }
 
@@ -133,14 +141,38 @@ final class OnboardingWizardModel {
         self.status = anyCodableStringValue(res.status) ?? "unknown"
         self.errorMessage = res.error
         self.currentStep = nil
+        self.canGoBack = false
         self.sessionId = nil
+    }
+
+    private func requestNext(params: [String: AnyCodable]) async {
+        guard let sessionId, !self.isSubmitting else { return }
+        self.isSubmitting = true
+        self.errorMessage = nil
+        defer { self.isSubmitting = false }
+
+        do {
+            var nextParams = params
+            nextParams["sessionId"] = AnyCodable(sessionId)
+            let res: WizardNextResult = try await GatewayConnection.shared.requestDecoded(
+                method: .wizardNext,
+                params: nextParams)
+            self.applyNextResult(res)
+        } catch {
+            self.status = "error"
+            self.errorMessage = error.localizedDescription
+            onboardingWizardLogger.error("submit failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 }
 
 struct OnboardingWizardStepView: View {
     let step: WizardStep
     let isSubmitting: Bool
+    let canGoBack: Bool
     let onSubmit: (AnyCodable?) -> Void
+    let onBack: () -> Void
+    let onExit: () -> Void
 
     @State private var textValue: String
     @State private var confirmValue: Bool
@@ -149,10 +181,20 @@ struct OnboardingWizardStepView: View {
 
     private let optionItems: [WizardOptionItem]
 
-    init(step: WizardStep, isSubmitting: Bool, onSubmit: @escaping (AnyCodable?) -> Void) {
+    init(
+        step: WizardStep,
+        isSubmitting: Bool,
+        canGoBack: Bool,
+        onSubmit: @escaping (AnyCodable?) -> Void,
+        onBack: @escaping () -> Void,
+        onExit: @escaping () -> Void
+    ) {
         self.step = step
         self.isSubmitting = isSubmitting
+        self.canGoBack = canGoBack
         self.onSubmit = onSubmit
+        self.onBack = onBack
+        self.onExit = onExit
         let options = parseWizardOptions(step.options).enumerated().map { index, option in
             WizardOptionItem(index: index, option: option)
         }
@@ -206,12 +248,23 @@ struct OnboardingWizardStepView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Button(action: self.submit) {
-                Text(wizardStepType(self.step) == "action" ? "Run" : "Continue")
-                    .frame(minWidth: 120)
+            HStack(spacing: 12) {
+                if self.canGoBack {
+                    Button("Back", action: self.onBack)
+                        .buttonStyle(.bordered)
+                        .disabled(self.isSubmitting)
+                }
+                Button("Exit setup", role: .destructive, action: self.onExit)
+                    .buttonStyle(.bordered)
+                    .disabled(self.isSubmitting)
+                Spacer()
+                Button(action: self.submit) {
+                    Text(wizardStepType(self.step) == "action" ? "Run" : "Continue")
+                        .frame(minWidth: 120)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(self.isSubmitting || self.isBlocked)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(self.isSubmitting || self.isBlocked)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

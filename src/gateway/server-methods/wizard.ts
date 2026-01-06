@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { defaultRuntime } from "../../runtime.js";
-import { WizardSession } from "../../wizard/session.js";
 import {
   ErrorCodes,
   errorShape,
@@ -10,7 +9,6 @@ import {
   validateWizardStartParams,
   validateWizardStatusParams,
 } from "../protocol/index.js";
-import { formatForLog } from "../ws-log.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 export const wizardHandlers: GatewayRequestHandlers = {
@@ -41,11 +39,9 @@ export const wizardHandlers: GatewayRequestHandlers = {
       workspace:
         typeof params.workspace === "string" ? params.workspace : undefined,
     };
-    const session = new WizardSession((prompter) =>
-      context.wizardRunner(opts, defaultRuntime, prompter),
-    );
-    context.wizardSessions.set(sessionId, session);
-    const result = await session.next();
+    const engine = await context.wizardEngineFactory(opts, defaultRuntime);
+    context.wizardSessions.set(sessionId, engine);
+    const result = await engine.start();
     if (result.done) {
       context.purgeWizardSession(sessionId);
     }
@@ -64,8 +60,8 @@ export const wizardHandlers: GatewayRequestHandlers = {
       return;
     }
     const sessionId = params.sessionId as string;
-    const session = context.wizardSessions.get(sessionId);
-    if (!session) {
+    const engine = context.wizardSessions.get(sessionId);
+    if (!engine) {
       respond(
         false,
         undefined,
@@ -73,30 +69,23 @@ export const wizardHandlers: GatewayRequestHandlers = {
       );
       return;
     }
+    if (engine.getStatus() !== "running") {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, "wizard not running"),
+      );
+      return;
+    }
     const answer = params.answer as
       | { stepId?: string; value?: unknown }
       | undefined;
-    if (answer) {
-      if (session.getStatus() !== "running") {
-        respond(
-          false,
-          undefined,
-          errorShape(ErrorCodes.INVALID_REQUEST, "wizard not running"),
-        );
-        return;
-      }
-      try {
-        await session.answer(String(answer.stepId ?? ""), answer.value);
-      } catch (err) {
-        respond(
-          false,
-          undefined,
-          errorShape(ErrorCodes.INVALID_REQUEST, formatForLog(err)),
-        );
-        return;
-      }
-    }
-    const result = await session.next();
+    const nav = params.nav as "next" | "back" | "cancel" | undefined;
+    const result = await engine.next({
+      stepId: answer?.stepId,
+      value: answer?.value,
+      nav,
+    });
     if (result.done) {
       context.purgeWizardSession(sessionId);
     }
@@ -115,8 +104,8 @@ export const wizardHandlers: GatewayRequestHandlers = {
       return;
     }
     const sessionId = params.sessionId as string;
-    const session = context.wizardSessions.get(sessionId);
-    if (!session) {
+    const engine = context.wizardSessions.get(sessionId);
+    if (!engine) {
       respond(
         false,
         undefined,
@@ -124,10 +113,10 @@ export const wizardHandlers: GatewayRequestHandlers = {
       );
       return;
     }
-    session.cancel();
+    engine.cancel();
     const status = {
-      status: session.getStatus(),
-      error: session.getError(),
+      status: engine.getStatus(),
+      error: engine.getError(),
     };
     context.wizardSessions.delete(sessionId);
     respond(true, status, undefined);
@@ -145,8 +134,8 @@ export const wizardHandlers: GatewayRequestHandlers = {
       return;
     }
     const sessionId = params.sessionId as string;
-    const session = context.wizardSessions.get(sessionId);
-    if (!session) {
+    const engine = context.wizardSessions.get(sessionId);
+    if (!engine) {
       respond(
         false,
         undefined,
@@ -155,8 +144,8 @@ export const wizardHandlers: GatewayRequestHandlers = {
       return;
     }
     const status = {
-      status: session.getStatus(),
-      error: session.getError(),
+      status: engine.getStatus(),
+      error: engine.getError(),
     };
     if (status.status !== "running") {
       context.wizardSessions.delete(sessionId);

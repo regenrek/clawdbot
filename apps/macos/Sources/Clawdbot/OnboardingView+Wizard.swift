@@ -78,11 +78,19 @@ private struct OnboardingWizardCardContent: View {
         case let .step(step):
             OnboardingWizardStepView(
                 step: step,
-                isSubmitting: self.wizard.isSubmitting)
-            { value in
-                Task { await self.wizard.submit(step: step, value: value) }
-            }
-            .id(step.id)
+                isSubmitting: self.wizard.isSubmitting,
+                canGoBack: self.wizard.canGoBack,
+                onSubmit: { value in
+                    Task { await self.wizard.submit(step: step, value: value) }
+                },
+                onBack: {
+                    Task { await self.wizard.goBack() }
+                },
+                onExit: {
+                    Task { await self.wizard.exitWizard() }
+                }
+            )
+            .id(self.wizard.stepToken)
         case .complete:
             Text("Wizard complete. Continue to the next step.")
                 .font(.headline)

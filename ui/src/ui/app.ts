@@ -33,6 +33,7 @@ import type {
   SessionsListResult,
   SkillStatusReport,
   StatusSummary,
+  WizardStep,
 } from "./types";
 import {
   defaultDiscordActions,
@@ -77,6 +78,12 @@ import {
   loadSkills,
 } from "./controllers/skills";
 import { loadDebug } from "./controllers/debug";
+import {
+  cancelWizard,
+  sendWizardNav,
+  startWizard,
+  submitWizardStep,
+} from "./controllers/wizard";
 
 type EventLogEntry = {
   ts: number;
@@ -207,6 +214,18 @@ export class ClawdbotApp extends LitElement {
   @state() configForm: Record<string, unknown> | null = null;
   @state() configFormDirty = false;
   @state() configFormMode: "form" | "raw" = "form";
+
+  @state() wizardSessionId: string | null = null;
+  @state() wizardStep: WizardStep | null = null;
+  @state() wizardStatus: string | null = null;
+  @state() wizardError: string | null = null;
+  @state() wizardStarting = false;
+  @state() wizardSubmitting = false;
+  @state() wizardCanGoBack = false;
+  @state() wizardTextValue = "";
+  @state() wizardConfirmValue = false;
+  @state() wizardSelectedIndex = 0;
+  @state() wizardSelectedIndices: number[] = [];
 
   @state() providersLoading = false;
   @state() providersSnapshot: ProvidersStatusSnapshot | null = null;
@@ -422,6 +441,11 @@ export class ClawdbotApp extends LitElement {
       onClose: ({ code, reason }) => {
         this.connected = false;
         this.lastError = `disconnected (${code}): ${reason || "no reason"}`;
+        this.wizardSessionId = null;
+        this.wizardStep = null;
+        this.wizardStatus = null;
+        this.wizardError = null;
+        this.wizardCanGoBack = false;
       },
       onEvent: (evt) => this.onEvent(evt),
       onGap: ({ expected, received }) => {
@@ -880,6 +904,26 @@ export class ClawdbotApp extends LitElement {
     await saveIMessageConfig(this);
     await loadConfig(this);
     await loadProviders(this, true);
+  }
+
+  async handleWizardStart() {
+    await startWizard(this);
+  }
+
+  async handleWizardSubmit() {
+    await submitWizardStep(this);
+  }
+
+  async handleWizardBack() {
+    await sendWizardNav(this, "back");
+  }
+
+  async handleWizardExit() {
+    await sendWizardNav(this, "cancel");
+  }
+
+  async handleWizardCancel() {
+    await cancelWizard(this);
   }
 
   render() {

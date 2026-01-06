@@ -22,7 +22,7 @@ If you want a personal, single-user assistant that feels local, fast, and always
 
 [Website](https://clawdbot.com) · [Docs](https://github.com/clawdbot/clawdbot/blob/main/docs/index.md) · Showcase: [https://github.com/clawdbot/clawdbot/blob/main/docs/showcase.md](https://github.com/clawdbot/clawdbot/blob/main/docs/showcase.md) · FAQ: [https://github.com/clawdbot/clawdbot/blob/main/docs/faq.md](https://github.com/clawdbot/clawdbot/blob/main/docs/faq.md) · Wizard: [https://github.com/clawdbot/clawdbot/blob/main/docs/wizard.md](https://github.com/clawdbot/clawdbot/blob/main/docs/wizard.md) · Nix: [https://github.com/clawdbot/nix-clawdbot](https://github.com/clawdbot/nix-clawdbot) · Docker: [https://github.com/clawdbot/clawdbot/blob/main/docs/docker.md](https://github.com/clawdbot/clawdbot/blob/main/docs/docker.md) · Discord: [https://discord.gg/clawd](https://discord.gg/clawd)
 
-Preferred setup: run the onboarding wizard (`clawdbot onboard`). It walks through gateway, workspace, providers, and skills. The CLI wizard is the recommended path and works on **macOS, Windows, and Linux**.
+Preferred setup: run the onboarding wizard (`clawdbot onboard`). It walks through gateway, workspace, providers, and skills. The CLI wizard is the recommended path and works on **macOS, Windows, and Linux**. Navigation note: **Esc goes back**; **Exit setup** is explicit.
 Works with npm, pnpm, or bun.
 
 **Subscriptions (OAuth):**

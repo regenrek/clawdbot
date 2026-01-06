@@ -831,17 +831,21 @@ public struct WizardStartParams: Codable, Sendable {
 public struct WizardNextParams: Codable, Sendable {
     public let sessionid: String
     public let answer: [String: AnyCodable]?
+    public let nav: AnyCodable?
 
     public init(
         sessionid: String,
-        answer: [String: AnyCodable]?
+        answer: [String: AnyCodable]?,
+        nav: AnyCodable?
     ) {
         self.sessionid = sessionid
         self.answer = answer
+        self.nav = nav
     }
     private enum CodingKeys: String, CodingKey {
         case sessionid = "sessionId"
         case answer
+        case nav
     }
 }
 
@@ -919,23 +923,27 @@ public struct WizardStep: Codable, Sendable {
 public struct WizardNextResult: Codable, Sendable {
     public let done: Bool
     public let step: [String: AnyCodable]?
+    public let cangoback: Bool?
     public let status: AnyCodable?
     public let error: String?
 
     public init(
         done: Bool,
         step: [String: AnyCodable]?,
+        cangoback: Bool?,
         status: AnyCodable?,
         error: String?
     ) {
         self.done = done
         self.step = step
+        self.cangoback = cangoback
         self.status = status
         self.error = error
     }
     private enum CodingKeys: String, CodingKey {
         case done
         case step
+        case cangoback = "canGoBack"
         case status
         case error
     }
@@ -945,6 +953,7 @@ public struct WizardStartResult: Codable, Sendable {
     public let sessionid: String
     public let done: Bool
     public let step: [String: AnyCodable]?
+    public let cangoback: Bool?
     public let status: AnyCodable?
     public let error: String?
 
@@ -952,12 +961,14 @@ public struct WizardStartResult: Codable, Sendable {
         sessionid: String,
         done: Bool,
         step: [String: AnyCodable]?,
+        cangoback: Bool?,
         status: AnyCodable?,
         error: String?
     ) {
         self.sessionid = sessionid
         self.done = done
         self.step = step
+        self.cangoback = cangoback
         self.status = status
         self.error = error
     }
@@ -965,6 +976,7 @@ public struct WizardStartResult: Codable, Sendable {
         case sessionid = "sessionId"
         case done
         case step
+        case cangoback = "canGoBack"
         case status
         case error
     }
