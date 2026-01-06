@@ -48,16 +48,24 @@ export function buildProvidersSection(
     onAnswer: async (_value, state) => {
       state.providers.status = await computeProviderStatus(state);
     },
+    next: () => "providers.status",
+  };
+
+  steps["providers.status"] = {
+    id: "providers.status",
+    type: "note",
+    title: "Provider status",
+    message: (state) =>
+      state.providers.status
+        ? statusSummary(state, state.providers.status)
+        : "Provider status unavailable.",
     next: () => "providers.hub",
   };
 
   steps["providers.hub"] = {
     id: "providers.hub",
     type: "select",
-    message: (state) =>
-      state.providers.status
-        ? statusSummary(state, state.providers.status)
-        : "Provider status",
+    message: "Provider actions",
     options: () => {
       const options = [
         { value: "configure", label: "Configure providers" },

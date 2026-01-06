@@ -32,7 +32,7 @@ async function promptStep(
       if (step.message || step.title) {
         await prompter.note(step.message ?? "", step.title);
       }
-      return await promptContinue(prompter, canGoBack);
+      return { value: undefined };
     case "select":
       return await prompter.select({
         message: step.message ?? "Select",
@@ -66,27 +66,13 @@ async function promptStep(
       if (step.message || step.title) {
         await prompter.note(step.message ?? "", step.title);
       }
-      return await promptContinue(prompter, canGoBack, "Run");
+      return { value: undefined };
     case "progress":
       if (step.message || step.title) {
         await prompter.note(step.message ?? "", step.title);
       }
-      return await promptContinue(prompter, canGoBack);
+      return { value: undefined };
     default:
-      return await promptContinue(prompter, canGoBack);
+      return { value: undefined };
   }
-}
-
-async function promptContinue(
-  prompter: WizardPrompter,
-  canGoBack: boolean,
-  label = "Continue",
-): Promise<WizardPromptResult<unknown>> {
-  const res = await prompter.select({
-    message: label,
-    options: [{ value: "__continue__", label }],
-    nav: { canGoBack },
-  });
-  if (res.nav) return res;
-  return { value: true };
 }
