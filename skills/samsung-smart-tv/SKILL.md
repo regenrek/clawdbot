@@ -10,9 +10,8 @@ Hybrid control via SmartThings (power/state) + local WebSocket remote (keys).
 
 ## Setup (SmartThings OAuth only)
 
-1. Create OAuth app (pick one):
-   - `npm i -g @smartthings/cli` then `smartthings apps:create`
-   - or one-off: `npx -y @smartthings/cli apps:create`
+1. Create OAuth app:
+   - `npx -y @smartthings/cli apps:create`
 2. Prompts:
    - App type: `OAuth-In App`
    - Redirect URI: `http://127.0.0.1:8789/callback`
