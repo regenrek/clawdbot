@@ -82,7 +82,7 @@ SmartThings cloud control requires OAuth (PATs are not supported).
 
 Notes:
 - Tokens are stored in tvctl config (e.g. `~/.config/tvctl/config.json` on Linux).
-- In Docker, mount that config dir so tokens survive restarts.
+- In Docker, run the OAuth browser flow on the host, then mount the config dir into the container (e.g. `~/.config/tvctl` → `/root/.config/tvctl`) so tokens survive restarts.
 - SmartThings docs: https://developer.smartthings.com/
 
 ## Troubleshooting workflow

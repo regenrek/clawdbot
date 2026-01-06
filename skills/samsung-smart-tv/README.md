@@ -58,7 +58,7 @@ Copy `deviceId` into `SMARTTHINGS_DEVICE_ID`.
 
 Tokens are stored in your tvctl config file (see `tvctl doctor` for the path) and auto-refreshed.
 
-Docker note: mount the tvctl config dir so refresh tokens persist (Linux default: `~/.config/tvctl`).
+Docker note: run the OAuth browser flow on the host, then mount the tvctl config dir into the container so refresh tokens persist (Linux default: `~/.config/tvctl` → `/root/.config/tvctl`).
 
 ## Clawdbot integration
 
