@@ -10,14 +10,13 @@ Hybrid control via SmartThings (power/state) + local WebSocket remote (keys).
 
 ## Setup (SmartThings OAuth only)
 
-1. Install SmartThings CLI:
-   - `npm i -g @smartthings/cli`
-2. Create OAuth app:
-   - `smartthings apps:create`
-   - prompts:
-     - App type: `OAuth-In App`
-     - Redirect URI: `http://127.0.0.1:8789/callback`
-     - Scopes: `r:devices:*`, `x:devices:*`
+1. Create OAuth app (pick one):
+   - `npm i -g @smartthings/cli` then `smartthings apps:create`
+   - or one-off: `npx -y @smartthings/cli apps:create`
+2. Prompts:
+   - App type: `OAuth-In App`
+   - Redirect URI: `http://127.0.0.1:8789/callback`
+   - Scopes: `r:devices:*`, `x:devices:*`
 3. Save Client ID + Client Secret.
 4. Run OAuth login:
    - `SMARTTHINGS_CLIENT_ID=... SMARTTHINGS_CLIENT_SECRET=... tvctl st auth oauth --redirect-uri http://127.0.0.1:8789/callback --open`

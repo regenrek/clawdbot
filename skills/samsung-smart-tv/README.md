@@ -12,16 +12,17 @@ npm run lint
 
 ## SmartThings OAuth setup (required for cloud control)
 
-1) Install SmartThings CLI
+1) Create OAuth app (pick one)
 ```bash
 npm i -g @smartthings/cli
-```
-
-2) Create OAuth app
-```bash
 smartthings apps:create
 ```
-Prompts:
+Or one-off:
+```bash
+npx -y @smartthings/cli apps:create
+```
+
+2) Prompts
 - App type: `OAuth-In App`
 - Redirect URI: `http://127.0.0.1:8789/callback`
 - Scopes: `r:devices:*`, `x:devices:*`
