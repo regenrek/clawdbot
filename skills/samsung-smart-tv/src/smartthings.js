@@ -15,7 +15,7 @@ const DEFAULT_SCOPE = 'r:devices:* x:devices:*';
 
 /**
  * @typedef {{
- *   mode: 'pat'|'oauth',
+ *   mode: 'oauth',
  *   accessToken: () => Promise<string>,
  *   describe: () => string,
  * }} AuthProvider
@@ -88,25 +88,15 @@ export function getOAuthClientCreds() {
  * @returns {AuthProvider}
  */
 export function getAuthProvider(cfg) {
-  const st = cfg.smartthings || {};
-  const auth = st.auth || {};
-
-  if (auth.mode === 'pat' || auth.pat) {
-    const pat = auth.pat;
-    if (!pat) throw new Error('SMARTTHINGS_PAT is required for PAT auth.');
-    return {
-      mode: 'pat',
-      accessToken: async () => pat,
-      describe: () => `PAT(${redact(pat)})`,
-    };
-  }
+ const st = cfg.smartthings || {};
+ const auth = st.auth || {};
 
   // OAuth mode needs client creds in env and refresh token in config.
   const { clientId, clientSecret } = getOAuthClientCreds();
   const oauth = auth.oauth || {};
   if (!oauth.refreshToken) {
     throw new Error(
-      'SmartThings OAuth not configured. Run: tvctl st auth oauth (or set SMARTTHINGS_PAT + SMARTTHINGS_DEVICE_ID).'
+      'SmartThings OAuth not configured. Run: tvctl st auth oauth (and set SMARTTHINGS_DEVICE_ID).'
     );
   }
   if (!clientId || !clientSecret) {

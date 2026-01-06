@@ -55,6 +55,23 @@ Use this when a device exposes a custom capability (Samsung TVs often do):
 - `tvctl st command --capability samsungvd.remoteControl --command send --arg HOME`
 - `tvctl st command --capability custom.launchapp --command launchApp --arg 3201907018807`
 
+## SmartThings OAuth setup (long-term)
+
+SmartThings cloud control requires OAuth (PATs are not supported).
+
+1. Create an OAuth app (recommended with smartthings-cli):
+   - `npm i -g @smartthings/cli`
+   - `smartthings apps:create` → choose OAuth-In App
+   - Set redirect URI: `http://127.0.0.1:8789/callback`
+2. Run OAuth login:
+   - `SMARTTHINGS_CLIENT_ID=... SMARTTHINGS_CLIENT_SECRET=... tvctl st auth oauth --redirect-uri http://127.0.0.1:8789/callback --open`
+3. Pick device id:
+   - `tvctl st devices` → copy `deviceId` into `SMARTTHINGS_DEVICE_ID`
+
+Notes:
+- Tokens are stored in tvctl config (e.g. `~/.config/tvctl/config.json` on Linux).
+- In Docker, mount that config dir so tokens survive restarts.
+
 ## Troubleshooting workflow
 
 1. `tvctl doctor`
@@ -64,5 +81,4 @@ Use this when a device exposes a custom capability (Samsung TVs often do):
 3. If SmartThings fails:
    - `tvctl st devices`
    - `tvctl st status`
-   - If using a PAT and it expired, re-auth (PATs are short-lived).
    - For long-term use, set up OAuth and run `tvctl st auth oauth`.

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 
-import { getEffectiveConfig, summarizeConfig, updateConfig } from '../src/config.js';
+import { getEffectiveConfig, summarizeConfig } from '../src/config.js';
 import { createLogger } from '../src/logger.js';
-import { parseArg, redact } from '../src/utils.js';
+import { parseArg } from '../src/utils.js';
 
 import {
   discoverLocal,
@@ -71,7 +71,7 @@ async function main() {
 
       if (!summary.samsung.ip) out.notes.push('Local: set SAMSUNG_TV_IP (and optionally SAMSUNG_TV_MAC).');
       if (!summary.smartthings.deviceId) out.notes.push('SmartThings: set SMARTTHINGS_DEVICE_ID.');
-      if (!summary.smartthings.mode) out.notes.push('SmartThings: set SMARTTHINGS_PAT (short-lived) or run OAuth login.');
+      if (!summary.smartthings.mode) out.notes.push('SmartThings: run OAuth login (tvctl st auth oauth).');
 
       print(out, program.opts().json);
     });
@@ -196,21 +196,6 @@ async function main() {
     });
 
   const auth = st.command('auth').description('Authentication helpers (one-time setup).');
-
-  auth
-    .command('pat <token>')
-    .description('Store a SmartThings PAT in the tvctl config file (not recommended; prefer env).')
-    .option('--device-id <id>', 'also store SMARTTHINGS_DEVICE_ID')
-    .action(async (token, opts) => {
-      await updateConfig((cfg) => {
-        cfg.smartthings = cfg.smartthings || {};
-        cfg.smartthings.auth = cfg.smartthings.auth || {};
-        cfg.smartthings.auth.mode = 'pat';
-        cfg.smartthings.auth.pat = token;
-        if (opts.deviceId) cfg.smartthings.deviceId = opts.deviceId;
-      });
-      print({ ok: true, stored: { pat: redact(token), deviceId: opts.deviceId || '' } }, program.opts().json);
-    });
 
   auth
     .command('oauth')

@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { asNumber, asString, isProbablyIp, isProbablyMac } from './utils.js';
 
 /**
@@ -17,8 +16,7 @@ import { asNumber, asString, isProbablyIp, isProbablyMac } from './utils.js';
  *   smartthings?: {
  *     deviceId?: string,
  *     auth?: {
- *       mode?: 'pat'|'oauth',
- *       pat?: string,
+ *       mode?: 'oauth',
  *       oauth?: {
  *         accessToken?: string,
  *         refreshToken?: string,
@@ -146,14 +144,6 @@ export function applyEnvOverrides(cfg) {
   const devId = process.env.SMARTTHINGS_DEVICE_ID || process.env.ST_DEVICE_ID;
   if (devId) next.smartthings.deviceId = devId;
 
-  // Auth: PAT (easy but short-lived)
-  const pat = process.env.SMARTTHINGS_PAT || process.env.SMARTTHINGS_TOKEN || process.env.ST_PAT;
-  if (pat) {
-    next.smartthings.auth.mode = 'pat';
-    // Do NOT store PAT by default (env-only). But keep it in-memory for this run.
-    next.smartthings.auth.pat = pat;
-  }
-
   // Auth: OAuth (recommended for long-term)
   const accessToken = process.env.SMARTTHINGS_ACCESS_TOKEN;
   const refreshToken = process.env.SMARTTHINGS_REFRESH_TOKEN;
@@ -211,7 +201,7 @@ export function summarizeConfig(cfg) {
     },
     smartthings: {
       deviceId: asString(st.deviceId),
-      mode: auth.mode || (auth.pat ? 'pat' : auth.oauth?.refreshToken ? 'oauth' : ''),
+      mode: auth.mode || (auth.oauth?.refreshToken ? 'oauth' : ''),
     },
   };
 }
