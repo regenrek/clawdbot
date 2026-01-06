@@ -1,7 +1,7 @@
 ---
 name: samsung-smart-tv
 description: Control a Samsung Smart TV (Neo QLED, Tizen) via SmartThings API plus local WebSocket remote (hybrid, bot-friendly CLI).
-metadata: {"clawdbot":{"emoji":"📺","requires":{"bins":["node"]},"homepage":"https://developer.smartthings.com/docs/getting-started/quickstart"}}
+metadata: {"clawdbot":{"emoji":"📺","requires":{"bins":["node"]},"homepage":"https://developer.smartthings.com/"}}
 ---
 
 ## What this skill does
@@ -61,6 +61,8 @@ SmartThings cloud control requires OAuth (PATs are not supported).
 
 1. Create an OAuth app (recommended with smartthings-cli):
    - `npm i -g @smartthings/cli`
+   - `smartthings --help` (CLI overview)
+   - `smartthings apps:create --help` (OAuth app flow)
    - `smartthings apps:create` → choose OAuth-In App
    - Set redirect URI: `http://127.0.0.1:8789/callback`
 2. Run OAuth login:
@@ -71,6 +73,7 @@ SmartThings cloud control requires OAuth (PATs are not supported).
 Notes:
 - Tokens are stored in tvctl config (e.g. `~/.config/tvctl/config.json` on Linux).
 - In Docker, mount that config dir so tokens survive restarts.
+- SmartThings docs: https://developer.smartthings.com/
 
 ## Troubleshooting workflow
 

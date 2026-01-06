@@ -16,6 +16,16 @@ npm run lint
 ## SmartThings OAuth setup (long-term)
 
 You need `SMARTTHINGS_CLIENT_ID` + `SMARTTHINGS_CLIENT_SECRET` from an OAuth-In app created via SmartThings CLI.
+Docs: https://developer.smartthings.com/
+
+CLI quickstart (recommended):
+```bash
+npm i -g @smartthings/cli
+smartthings --help
+smartthings apps:create --help
+smartthings apps:create
+```
+Choose **OAuth-In App** and set redirect URI: `http://127.0.0.1:8789/callback`.
 
 Then:
 
