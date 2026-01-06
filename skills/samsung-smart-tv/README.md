@@ -12,6 +12,11 @@ npm run lint
 
 ## SmartThings OAuth setup (required for cloud control)
 
+0) CLI check/help
+```bash
+npx -y @smartthings/cli --help
+```
+
 1) Create OAuth app
 ```bash
 npx -y @smartthings/cli apps:create

@@ -10,6 +10,8 @@ Hybrid control via SmartThings (power/state) + local WebSocket remote (keys).
 
 ## Setup (SmartThings OAuth only)
 
+0. CLI check/help:
+   - `npx -y @smartthings/cli --help`
 1. Create OAuth app:
    - `npx -y @smartthings/cli apps:create`
 2. Prompts:
