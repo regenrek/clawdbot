@@ -18,23 +18,43 @@ npm run lint
 You need `SMARTTHINGS_CLIENT_ID` + `SMARTTHINGS_CLIENT_SECRET` from an OAuth-In app created via SmartThings CLI.
 Docs: https://developer.smartthings.com/
 
-CLI quickstart (recommended):
+Step 1: Install SmartThings CLI
 ```bash
 npm i -g @smartthings/cli
-smartthings --help
-smartthings apps:create --help
+```
+
+Step 2: Create the OAuth app
+```bash
 smartthings apps:create
 ```
-Choose **OAuth-In App** and set redirect URI: `http://127.0.0.1:8789/callback`.
 
-Then:
+Step 3: Answer the prompts
+- What kind of app? → `OAuth-In App`
+- App Name: `Nepp TV Control`
+- Display Name: `Nepp`
+- Description: `TV control bot`
+- Redirect URI: `http://127.0.0.1:8789/callback`
+- Scopes:
+  - `r:devices:*`
+  - `x:devices:*`
 
+Step 4: Save the credentials
+- Client ID: `...`
+- Client Secret: `...`
+
+Step 5: Run OAuth login
 ```bash
 export SMARTTHINGS_CLIENT_ID='...'
 export SMARTTHINGS_CLIENT_SECRET='...'
 
 tvctl st auth oauth --redirect-uri http://127.0.0.1:8789/callback --open
 ```
+
+Step 6: Pick device id
+```bash
+tvctl st devices
+```
+Copy `deviceId` into `SMARTTHINGS_DEVICE_ID`.
 
 Tokens are stored in your tvctl config file (see `tvctl doctor` for the path) and auto-refreshed.
 

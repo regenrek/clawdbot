@@ -59,15 +59,25 @@ Use this when a device exposes a custom capability (Samsung TVs often do):
 
 SmartThings cloud control requires OAuth (PATs are not supported).
 
-1. Create an OAuth app (recommended with smartthings-cli):
+1. Install SmartThings CLI:
    - `npm i -g @smartthings/cli`
-   - `smartthings --help` (CLI overview)
-   - `smartthings apps:create --help` (OAuth app flow)
-   - `smartthings apps:create` → choose OAuth-In App
-   - Set redirect URI: `http://127.0.0.1:8789/callback`
-2. Run OAuth login:
+2. Create the OAuth app:
+   - `smartthings apps:create`
+3. Answer the prompts:
+   - What kind of app? → `OAuth-In App`
+   - App Name: `Nepp TV Control`
+   - Display Name: `Nepp`
+   - Description: `TV control bot`
+   - Redirect URI: `http://127.0.0.1:8789/callback`
+   - Scopes:
+     - `r:devices:*`
+     - `x:devices:*`
+4. Save the credentials:
+   - Client ID: `...`
+   - Client Secret: `...`
+5. Run OAuth login:
    - `SMARTTHINGS_CLIENT_ID=... SMARTTHINGS_CLIENT_SECRET=... tvctl st auth oauth --redirect-uri http://127.0.0.1:8789/callback --open`
-3. Pick device id:
+6. Pick device id:
    - `tvctl st devices` → copy `deviceId` into `SMARTTHINGS_DEVICE_ID`
 
 Notes:
