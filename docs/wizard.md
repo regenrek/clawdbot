@@ -29,7 +29,7 @@ clawdbot configure
 - Model/auth (Anthropic or OpenAI Codex OAuth recommended, API key optional, Minimax M2.1 via LM Studio)
 - Workspace location + bootstrap files
 - Gateway settings (port/bind/auth/tailscale)
-- Providers (WhatsApp, Telegram, Discord, Signal)
+- Providers (WhatsApp, Telegram, Discord, Slack, Signal, iMessage) with a status hub + per‑provider loop
 - Daemon install (LaunchAgent / systemd user unit / Scheduled Task)
 - Health check
 - Skills (recommended)
@@ -66,9 +66,13 @@ It does **not** install or change anything on the remote host.
    - Non‑loopback binds require auth.
 
 5) **Providers**
+   - Starts in a **status hub** with Configure / Disable / Continue actions.
+   - Configure = multiselect providers, then the wizard runs each provider’s sub‑steps in order.
+   - After each provider: **Next provider / Back / Return to hub**.
    - WhatsApp: optional QR login.
    - Telegram: bot token.
    - Discord: bot token.
+   - Slack: socket mode tokens + manifest.
    - Signal: optional `signal-cli` install + account config.
    - iMessage: local `imsg` CLI path + DB access.
 
@@ -92,6 +96,12 @@ It does **not** install or change anything on the remote host.
 9) **Finish**
    - Summary + next steps, including iOS/Android/macOS apps for extra features.
    - If no GUI is detected, the wizard prints SSH port-forward instructions for the Control UI instead of opening a browser.
+
+## Navigation
+
+- **Back** returns to the previous prompt step (not the previous section).
+- **Esc / cancel** goes back when there is history; at the first step it opens the Exit confirmation.
+- **Exit setup** is explicit in the UI. CLI text prompts accept `:exit` as a shortcut.
 
 ## Remote mode
 
@@ -128,6 +138,7 @@ Add `--json` for a machine‑readable summary.
 
 The Gateway exposes the wizard flow over RPC (`wizard.start`, `wizard.next`, `wizard.cancel`, `wizard.status`).
 Clients (macOS app, Control UI) can render steps without re‑implementing onboarding logic.
+`wizard.next` accepts `nav: "next"|"back"|"cancel"` and responses include `canGoBack`.
 
 ## Signal setup (signal-cli)
 
@@ -162,5 +173,5 @@ Sessions are stored under `~/.clawdbot/sessions/`.
 
 - macOS app onboarding: `docs/onboarding.md`
 - Config reference: `docs/configuration.md`
-- Providers: `docs/whatsapp.md`, `docs/telegram.md`, `docs/discord.md`, `docs/signal.md`, `docs/imessage.md`
+- Providers: `docs/whatsapp.md`, `docs/telegram.md`, `docs/discord.md`, `docs/slack.md`, `docs/signal.md`, `docs/imessage.md`
 - Skills: `docs/skills.md`, `docs/skills-config.md`

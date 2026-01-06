@@ -15,10 +15,12 @@
 - Auto-reply: require slash for control commands to avoid false triggers in normal text.
 - Auto-reply: treat steer during compaction as a follow-up, queued until compaction completes.
 - Auth: lock auth profile refreshes to avoid multi-instance OAuth logouts; keep credentials on refresh failure.
+- Gateway/CLI: stop forcing localhost URL in remote mode so remote gateway config works. Thanks @oswalpalash for PR #293.
 - Onboarding: prompt immediately for OpenAI Codex redirect URL on remote/headless logins.
 - Configure: add OpenAI Codex (ChatGPT OAuth) auth choice (align with onboarding).
 - Doctor: suggest adding the workspace memory system when missing (opt-out via `--no-workspace-suggestions`).
 - Build: fix duplicate protocol export, align Codex OAuth options, and add proper-lockfile typings.
+- Build: install Bun in the Dockerfile so `pnpm build` can run Bun scripts. Thanks @loukotal for PR #284.
 - Typing indicators: stop typing once the reply dispatcher drains to prevent stuck typing across Discord/Telegram/WhatsApp.
 - Typing indicators: fix a race that could keep the typing indicator stuck after quick replies. Thanks @thewilloftheshadow for PR #270.
 - Google: merge consecutive messages to satisfy strict role alternation for Google provider models. Thanks @Asleep123 for PR #266.
@@ -70,6 +72,7 @@
 - Skills: emit MEDIA token after Nano Banana Pro image generation. Thanks @Iamadig for PR #271.
 - WhatsApp: set sender E.164 for direct chats so owner commands work in DMs.
 - Slack: keep auto-replies in the original thread when responding to thread messages. Thanks @scald for PR #251.
+- Slack: fix Slack provider startup under Bun by using a named import for Bolt `App`. Thanks @snopoke for PR #299.
 - Discord: surface missing-permission hints (muted/role overrides) when replies fail.
 - Discord: use channel IDs for DMs instead of user IDs. Thanks @VACInc for PR #261.
 - Docs: clarify Slack manifest scopes (current vs optional) with references. Thanks @jarvis-medmatic for PR #235.

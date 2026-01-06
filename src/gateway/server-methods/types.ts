@@ -3,7 +3,8 @@ import type { createDefaultDeps } from "../../cli/deps.js";
 import type { HealthSummary } from "../../commands/health.js";
 import type { CronService } from "../../cron/service.js";
 import type { startNodeBridgeServer } from "../../infra/bridge/server.js";
-import type { WizardSession } from "../../wizard/session.js";
+import type { WizardEngine } from "../../wizard/engine.js";
+import type { WizardContext, WizardState } from "../../wizard/flows/types.js";
 import type {
   ConnectParams,
   ErrorShape,
@@ -65,7 +66,7 @@ export type GatewayRequestContext = {
     sessionKey?: string,
   ) => { sessionKey: string; clientRunId: string } | undefined;
   dedupe: Map<string, DedupeEntry>;
-  wizardSessions: Map<string, WizardSession>;
+  wizardSessions: Map<string, WizardEngine<WizardState, WizardContext>>;
   findRunningWizard: () => string | null;
   purgeWizardSession: (id: string) => void;
   getRuntimeSnapshot: () => ProviderRuntimeSnapshot;
@@ -73,11 +74,10 @@ export type GatewayRequestContext = {
   stopWhatsAppProvider: () => Promise<void>;
   stopTelegramProvider: () => Promise<void>;
   markWhatsAppLoggedOut: (cleared: boolean) => void;
-  wizardRunner: (
+  wizardEngineFactory: (
     opts: import("../../commands/onboard-types.js").OnboardOptions,
     runtime: import("../../runtime.js").RuntimeEnv,
-    prompter: import("../../wizard/prompts.js").WizardPrompter,
-  ) => Promise<void>;
+  ) => Promise<WizardEngine<WizardState, WizardContext>>;
   broadcastVoiceWakeChanged: (triggers: string[]) => void;
 };
 

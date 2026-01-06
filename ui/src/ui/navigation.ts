@@ -5,7 +5,7 @@ export const TAB_GROUPS = [
     tabs: ["overview", "connections", "instances", "sessions", "cron"],
   },
   { label: "Agent", tabs: ["skills", "nodes"] },
-  { label: "Settings", tabs: ["config", "debug"] },
+  { label: "Settings", tabs: ["config", "wizard", "debug"] },
 ] as const;
 
 export type Tab =
@@ -18,6 +18,7 @@ export type Tab =
   | "nodes"
   | "chat"
   | "config"
+  | "wizard"
   | "debug";
 
 const TAB_PATHS: Record<Tab, string> = {
@@ -30,6 +31,7 @@ const TAB_PATHS: Record<Tab, string> = {
   nodes: "/nodes",
   chat: "/chat",
   config: "/config",
+  wizard: "/wizard",
   debug: "/debug",
 };
 
@@ -116,6 +118,8 @@ export function titleForTab(tab: Tab) {
       return "Chat";
     case "config":
       return "Config";
+    case "wizard":
+      return "Setup Wizard";
     case "debug":
       return "Debug";
     default:
@@ -143,6 +147,8 @@ export function subtitleForTab(tab: Tab) {
       return "Direct gateway chat session for quick interventions.";
     case "config":
       return "Edit ~/.clawdbot/clawdbot.json safely.";
+    case "wizard":
+      return "Run the guided onboarding flow from the gateway.";
     case "debug":
       return "Gateway snapshots, events, and manual RPC calls.";
     default:

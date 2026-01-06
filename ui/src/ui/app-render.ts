@@ -22,6 +22,7 @@ import type {
   SessionsListResult,
   SkillStatusReport,
   StatusSummary,
+  WizardStep,
 } from "./types";
 import type {
   CronFormState,
@@ -41,6 +42,7 @@ import { renderNodes } from "./views/nodes";
 import { renderOverview } from "./views/overview";
 import { renderSessions } from "./views/sessions";
 import { renderSkills } from "./views/skills";
+import { renderWizard } from "./views/wizard";
 import {
   loadProviders,
   updateDiscordForm,
@@ -103,6 +105,17 @@ export type AppViewState = {
   configUiHints: Record<string, unknown>;
   configForm: Record<string, unknown> | null;
   configFormMode: "form" | "raw";
+  wizardSessionId: string | null;
+  wizardStep: WizardStep | null;
+  wizardStatus: string | null;
+  wizardError: string | null;
+  wizardStarting: boolean;
+  wizardSubmitting: boolean;
+  wizardCanGoBack: boolean;
+  wizardTextValue: string;
+  wizardConfirmValue: boolean;
+  wizardSelectedIndex: number;
+  wizardSelectedIndices: number[];
   providersLoading: boolean;
   providersSnapshot: ProvidersStatusSnapshot | null;
   providersError: string | null;
@@ -176,6 +189,11 @@ export type AppViewState = {
   handleWhatsAppLogout: () => Promise<void>;
   handleTelegramSave: () => Promise<void>;
   handleSendChat: () => Promise<void>;
+  handleWizardStart: () => Promise<void>;
+  handleWizardSubmit: () => Promise<void>;
+  handleWizardBack: () => Promise<void>;
+  handleWizardExit: () => Promise<void>;
+  handleWizardCancel: () => Promise<void>;
   resetToolStream: () => void;
 };
 
@@ -432,6 +450,37 @@ export function renderApp(state: AppViewState) {
               onFormPatch: (path, value) => updateConfigFormValue(state, path, value),
               onReload: () => loadConfig(state),
               onSave: () => saveConfig(state),
+            })
+          : nothing}
+
+        ${state.tab === "wizard"
+          ? renderWizard({
+              connected: state.connected,
+              wizardSessionId: state.wizardSessionId,
+              wizardStatus: state.wizardStatus,
+              wizardError: state.wizardError,
+              wizardStep: state.wizardStep,
+              wizardStarting: state.wizardStarting,
+              wizardSubmitting: state.wizardSubmitting,
+              wizardCanGoBack: state.wizardCanGoBack,
+              wizardTextValue: state.wizardTextValue,
+              wizardConfirmValue: state.wizardConfirmValue,
+              wizardSelectedIndex: state.wizardSelectedIndex,
+              wizardSelectedIndices: state.wizardSelectedIndices,
+              onStart: () => state.handleWizardStart(),
+              onSubmit: () => state.handleWizardSubmit(),
+              onBack: () => state.handleWizardBack(),
+              onExit: () => state.handleWizardExit(),
+              onCancel: () => state.handleWizardCancel(),
+              onTextChange: (next) => (state.wizardTextValue = next),
+              onConfirmChange: (next) => (state.wizardConfirmValue = next),
+              onSelectIndex: (next) => (state.wizardSelectedIndex = next),
+              onToggleIndex: (index, checked) => {
+                const next = new Set(state.wizardSelectedIndices);
+                if (checked) next.add(index);
+                else next.delete(index);
+                state.wizardSelectedIndices = [...next];
+              },
             })
           : nothing}
 

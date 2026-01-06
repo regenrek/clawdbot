@@ -418,10 +418,17 @@ export const WizardAnswerSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const WizardNavActionSchema = Type.Union([
+  Type.Literal("next"),
+  Type.Literal("back"),
+  Type.Literal("cancel"),
+]);
+
 export const WizardNextParamsSchema = Type.Object(
   {
     sessionId: NonEmptyString,
     answer: Type.Optional(WizardAnswerSchema),
+    nav: Type.Optional(WizardNavActionSchema),
   },
   { additionalProperties: false },
 );
@@ -478,6 +485,7 @@ export const WizardNextResultSchema = Type.Object(
   {
     done: Type.Boolean(),
     step: Type.Optional(WizardStepSchema),
+    canGoBack: Type.Optional(Type.Boolean()),
     status: Type.Optional(
       Type.Union([
         Type.Literal("running"),
@@ -496,6 +504,7 @@ export const WizardStartResultSchema = Type.Object(
     sessionId: NonEmptyString,
     done: Type.Boolean(),
     step: Type.Optional(WizardStepSchema),
+    canGoBack: Type.Optional(Type.Boolean()),
     status: Type.Optional(
       Type.Union([
         Type.Literal("running"),
@@ -869,6 +878,7 @@ export const ProtocolSchemas: Record<string, TSchema> = {
   ConfigSchemaResponse: ConfigSchemaResponseSchema,
   WizardStartParams: WizardStartParamsSchema,
   WizardNextParams: WizardNextParamsSchema,
+  WizardNavAction: WizardNavActionSchema,
   WizardCancelParams: WizardCancelParamsSchema,
   WizardStatusParams: WizardStatusParamsSchema,
   WizardStep: WizardStepSchema,
@@ -937,6 +947,7 @@ export type ConfigSetParams = Static<typeof ConfigSetParamsSchema>;
 export type ConfigSchemaParams = Static<typeof ConfigSchemaParamsSchema>;
 export type ConfigSchemaResponse = Static<typeof ConfigSchemaResponseSchema>;
 export type WizardStartParams = Static<typeof WizardStartParamsSchema>;
+export type WizardNavAction = Static<typeof WizardNavActionSchema>;
 export type WizardNextParams = Static<typeof WizardNextParamsSchema>;
 export type WizardCancelParams = Static<typeof WizardCancelParamsSchema>;
 export type WizardStatusParams = Static<typeof WizardStatusParamsSchema>;

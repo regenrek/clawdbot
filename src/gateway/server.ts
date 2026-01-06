@@ -83,8 +83,9 @@ import {
   runtimeForLogger,
 } from "../logging.js";
 import { setCommandLaneConcurrency } from "../process/command-queue.js";
-import { runOnboardingWizard } from "../wizard/onboarding.js";
-import type { WizardSession } from "../wizard/session.js";
+import type { WizardEngine } from "../wizard/engine.js";
+import { createOnboardingEngine } from "../wizard/engine-factory.js";
+import type { WizardContext, WizardState } from "../wizard/flows/types.js";
 import {
   assertGatewayAuthConfigured,
   authorizeGatewayConnect,
@@ -307,13 +308,12 @@ export type GatewayServerOptions = {
    */
   allowCanvasHostInTests?: boolean;
   /**
-   * Test-only: override the onboarding wizard runner.
+   * Test-only: override the onboarding wizard engine factory.
    */
-  wizardRunner?: (
+  wizardEngineFactory?: (
     opts: import("../commands/onboard-types.js").OnboardOptions,
     runtime: import("../runtime.js").RuntimeEnv,
-    prompter: import("../wizard/prompts.js").WizardPrompter,
-  ) => Promise<void>;
+  ) => Promise<WizardEngine<WizardState, WizardContext>>;
 };
 
 let presenceVersion = 1;
@@ -449,8 +449,12 @@ export async function startGatewayServer(
     );
   }
 
-  const wizardRunner = opts.wizardRunner ?? runOnboardingWizard;
-  const wizardSessions = new Map<string, WizardSession>();
+  const wizardEngineFactory =
+    opts.wizardEngineFactory ?? createOnboardingEngine;
+  const wizardSessions = new Map<
+    string,
+    WizardEngine<WizardState, WizardContext>
+  >();
 
   const findRunningWizard = (): string | null => {
     for (const [id, session] of wizardSessions) {
@@ -1524,7 +1528,7 @@ export async function startGatewayServer(
               stopWhatsAppProvider,
               stopTelegramProvider,
               markWhatsAppLoggedOut,
-              wizardRunner,
+              wizardEngineFactory,
               broadcastVoiceWakeChanged,
             },
           });

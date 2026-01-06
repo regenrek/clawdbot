@@ -16,13 +16,13 @@ Purpose: shared onboarding + config surfaces across CLI, macOS app, and Web UI.
 
 ## Gateway RPC
 - `wizard.start` params: `{ mode?: "local"|"remote", workspace?: string }`
-- `wizard.next` params: `{ sessionId, answer?: { stepId, value? } }`
+- `wizard.next` params: `{ sessionId, answer?: { stepId, value? }, nav?: "next"|"back"|"cancel" }`
 - `wizard.cancel` params: `{ sessionId }`
 - `wizard.status` params: `{ sessionId }`
 - `config.schema` params: `{}`
 
 Responses (shape)
-- Wizard: `{ sessionId, done, step?, status?, error? }`
+- Wizard: `{ sessionId, done, step?, canGoBack?, status?, error? }`
 - Config schema: `{ schema, uiHints, version, generatedAt }`
 
 ## UI Hints
