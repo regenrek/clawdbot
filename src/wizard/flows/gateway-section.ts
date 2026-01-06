@@ -44,9 +44,18 @@ export function buildGatewaySection(
     type: "select",
     message: "Gateway bind",
     options: () => [
-      { value: "loopback", label: "Loopback (127.0.0.1)" },
-      { value: "lan", label: "LAN" },
-      { value: "tailnet", label: "Tailnet" },
+      {
+        value: "loopback",
+        label: "Loopback - (127.0.0.1). No remote access. Only this machine.",
+      },
+      {
+        value: "tailnet",
+        label: "Tailnet - Remote access. Requires auth.",
+      },
+      {
+        value: "lan",
+        label: "LAN - Reachable by anyone on your home Network.",
+      },
       { value: "auto", label: "Auto" },
     ],
     onAnswer: (value, state) => {
@@ -66,9 +75,12 @@ export function buildGatewaySection(
     type: "select",
     message: "Gateway auth",
     options: () => [
-      { value: "off", label: "Off (loopback only)" },
-      { value: "token", label: "Token" },
-      { value: "password", label: "Password" },
+      { value: "off", label: "Off: no login. Safe only with loopback." },
+      { value: "token", label: "Token: Best for tailnet/remote." },
+      {
+        value: "password",
+        label: "Password: Public funnel; less secure than token.",
+      },
     ],
     onAnswer: (value, state) => {
       const mode =
@@ -93,16 +105,14 @@ export function buildGatewaySection(
     type: "select",
     message: "Tailscale exposure",
     options: () => [
-      { value: "off", label: "Off", hint: "No Tailscale exposure" },
+      { value: "off", label: "Off: no Tailscale HTTP exposure." },
       {
         value: "serve",
-        label: "Serve",
-        hint: "Private HTTPS for your tailnet (devices on Tailscale)",
+        label: "Serve: tailnet-only HTTPS to Control UI (safe).",
       },
       {
         value: "funnel",
-        label: "Funnel",
-        hint: "Public HTTPS via Tailscale Funnel (internet)",
+        label: "Funnel: public HTTPS on the internet (needs password, riskier).",
       },
     ],
     onAnswer: (value, state) => {
@@ -181,7 +191,8 @@ export function buildGatewaySection(
   steps["gateway.tailscale.reset"] = {
     id: "gateway.tailscale.reset",
     type: "confirm",
-    message: "Reset Tailscale serve/funnel on exit?",
+    message:
+      "Turn off Tailscale Serve/Funnel when the gateway stops?\nYes: turns off Tailscale Serve/Funnel when gateway stops.\nNo: leaves it configured so it stays reachable after restarts.",
     initialValue: () => false,
     onAnswer: (value, state) => {
       state.draftConfig = {
