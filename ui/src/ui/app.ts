@@ -40,6 +40,7 @@ import {
   type CronFormState,
   type DiscordForm,
   type IMessageForm,
+  type RocketChatForm,
   type SlackForm,
   type SignalForm,
   type TelegramForm,
@@ -61,6 +62,7 @@ import {
   logoutWhatsApp,
   saveDiscordConfig,
   saveIMessageConfig,
+  saveRocketChatConfig,
   saveSlackConfig,
   saveSignalConfig,
   saveTelegramConfig,
@@ -271,6 +273,32 @@ export class ClawdbotApp extends LitElement {
   @state() slackTokenLocked = false;
   @state() slackAppTokenLocked = false;
   @state() slackConfigStatus: string | null = null;
+  @state() rocketchatForm: RocketChatForm = {
+    enabled: true,
+    baseUrl: "",
+    authToken: "",
+    userId: "",
+    botUsername: "",
+    alias: "",
+    avatarUrl: "",
+    emoji: "",
+    dmPolicy: "pairing",
+    allowFrom: "",
+    groupPolicy: "open",
+    requireMention: true,
+    rooms: "",
+    textChunkLimit: "",
+    mediaMaxMb: "",
+    webhookToken: "",
+    webhookHost: "",
+    webhookPort: "",
+    webhookPath: "",
+  };
+  @state() rocketchatSaving = false;
+  @state() rocketchatBaseUrlLocked = false;
+  @state() rocketchatAuthLocked = false;
+  @state() rocketchatUserIdLocked = false;
+  @state() rocketchatConfigStatus: string | null = null;
   @state() signalForm: SignalForm = {
     enabled: true,
     account: "",
@@ -883,6 +911,12 @@ export class ClawdbotApp extends LitElement {
 
   async handleSlackSave() {
     await saveSlackConfig(this);
+    await loadConfig(this);
+    await loadProviders(this, true);
+  }
+
+  async handleRocketChatSave() {
+    await saveRocketChatConfig(this);
     await loadConfig(this);
     await loadProviders(this, true);
   }

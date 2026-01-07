@@ -42,6 +42,7 @@ const GROUP_LABELS: Record<string, string> = {
   telegram: "Telegram",
   discord: "Discord",
   slack: "Slack",
+  rocketchat: "Rocket.Chat",
   signal: "Signal",
   imessage: "iMessage",
   whatsapp: "WhatsApp",
@@ -69,6 +70,7 @@ const GROUP_ORDER: Record<string, number> = {
   telegram: 140,
   discord: 150,
   slack: 155,
+  rocketchat: 158,
   signal: 160,
   imessage: 170,
   whatsapp: 180,
@@ -125,6 +127,13 @@ const FIELD_LABELS: Record<string, string> = {
   "discord.token": "Discord Bot Token",
   "slack.botToken": "Slack Bot Token",
   "slack.appToken": "Slack App Token",
+  "rocketchat.baseUrl": "Rocket.Chat Base URL",
+  "rocketchat.authToken": "Rocket.Chat Auth Token",
+  "rocketchat.userId": "Rocket.Chat User ID",
+  "rocketchat.dmPolicy": "Rocket.Chat DM Policy",
+  "rocketchat.webhook.token": "Rocket.Chat Webhook Token",
+  "rocketchat.webhook.port": "Rocket.Chat Webhook Port",
+  "rocketchat.webhook.path": "Rocket.Chat Webhook Path",
   "signal.account": "Signal Account",
   "imessage.cliPath": "iMessage CLI Path",
 };
@@ -195,11 +204,15 @@ const FIELD_HELP: Record<string, string> = {
     "Jitter factor (0-1) applied to Discord retry delays.",
   "slack.dm.policy":
     'Direct message access control ("pairing" recommended). "open" requires slack.dm.allowFrom=["*"].',
+  "rocketchat.dmPolicy":
+    'Direct message access control ("pairing" recommended). "open" requires rocketchat.allowFrom=["*"].',
 };
 
 const FIELD_PLACEHOLDERS: Record<string, string> = {
   "gateway.remote.url": "ws://host:18789",
   "gateway.controlUi.basePath": "/clawdbot",
+  "rocketchat.baseUrl": "https://chat.example.com",
+  "rocketchat.webhook.path": "/rocketchat/outgoing",
 };
 
 const SENSITIVE_PATTERNS = [/token/i, /password/i, /secret/i, /api.?key/i];

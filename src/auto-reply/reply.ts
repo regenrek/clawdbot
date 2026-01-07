@@ -109,7 +109,7 @@ function stripSenderPrefix(value?: string) {
   if (!value) return "";
   const trimmed = value.trim();
   return trimmed.replace(
-    /^(whatsapp|telegram|discord|signal|imessage|webchat|user|group|channel):/i,
+    /^(whatsapp|telegram|discord|slack|rocketchat|signal|imessage|webchat|user|group|channel):/i,
     "",
   );
 }
@@ -131,6 +131,10 @@ function resolveElevatedAllowList(
       if (hasExplicit) return allowFrom?.discord;
       return discordFallback;
     }
+    case "slack":
+      return allowFrom?.slack;
+    case "rocketchat":
+      return allowFrom?.rocketchat;
     case "signal":
       return allowFrom?.signal;
     case "imessage":

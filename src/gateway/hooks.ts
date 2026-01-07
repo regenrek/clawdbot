@@ -179,6 +179,7 @@ export function normalizeAgentPayload(
     providerRaw === "telegram" ||
     providerRaw === "discord" ||
     providerRaw === "slack" ||
+    providerRaw === "rocketchat" ||
     providerRaw === "signal" ||
     providerRaw === "imessage" ||
     providerRaw === "last"
@@ -192,7 +193,7 @@ export function normalizeAgentPayload(
     return {
       ok: false,
       error:
-        "provider must be last|whatsapp|telegram|discord|slack|signal|imessage",
+        "provider must be last|whatsapp|telegram|discord|slack|rocketchat|signal|imessage",
     };
   }
   const toRaw = payload.to;

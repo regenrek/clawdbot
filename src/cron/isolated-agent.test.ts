@@ -101,6 +101,7 @@ describe("runCronIsolatedAgentTurn", () => {
         sendMessageWhatsApp: vi.fn(),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -133,6 +134,7 @@ describe("runCronIsolatedAgentTurn", () => {
         sendMessageWhatsApp: vi.fn(),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -173,6 +175,7 @@ describe("runCronIsolatedAgentTurn", () => {
         sendMessageWhatsApp: vi.fn(),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -206,6 +209,7 @@ describe("runCronIsolatedAgentTurn", () => {
         sendMessageWhatsApp: vi.fn(),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -246,6 +250,7 @@ describe("runCronIsolatedAgentTurn", () => {
         sendMessageWhatsApp: vi.fn(),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -288,6 +293,7 @@ describe("runCronIsolatedAgentTurn", () => {
           chatId: "123",
         }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -343,6 +349,7 @@ describe("runCronIsolatedAgentTurn", () => {
           messageId: "d1",
           channelId: "chan",
         }),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -388,6 +395,7 @@ describe("runCronIsolatedAgentTurn", () => {
           chatId: "123",
         }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -431,6 +439,7 @@ describe("runCronIsolatedAgentTurn", () => {
         }),
         sendMessageTelegram: vi.fn(),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -473,6 +482,7 @@ describe("runCronIsolatedAgentTurn", () => {
           chatId: "123",
         }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -516,6 +526,7 @@ describe("runCronIsolatedAgentTurn", () => {
           chatId: "123",
         }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };
@@ -564,6 +575,7 @@ describe("runCronIsolatedAgentTurn", () => {
           chatId: "123",
         }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };

@@ -825,6 +825,40 @@ describe("legacy config detection", () => {
     }
   });
 
+  it('rejects rocketchat.dmPolicy="open" without allowFrom "*"', async () => {
+    vi.resetModules();
+    const { validateConfigObject } = await import("./config.js");
+    const res = validateConfigObject({
+      rocketchat: { dmPolicy: "open", allowFrom: ["user123"] },
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.issues[0]?.path).toBe("rocketchat.allowFrom");
+    }
+  });
+
+  it('accepts rocketchat.dmPolicy="open" with allowFrom "*"', async () => {
+    vi.resetModules();
+    const { validateConfigObject } = await import("./config.js");
+    const res = validateConfigObject({
+      rocketchat: { dmPolicy: "open", allowFrom: ["*"] },
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.config.rocketchat?.dmPolicy).toBe("open");
+    }
+  });
+
+  it("defaults rocketchat.dmPolicy to pairing when rocketchat section exists", async () => {
+    vi.resetModules();
+    const { validateConfigObject } = await import("./config.js");
+    const res = validateConfigObject({ rocketchat: {} });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.config.rocketchat?.dmPolicy).toBe("pairing");
+    }
+  });
+
   it('rejects discord.dm.policy="open" without allowFrom "*"', async () => {
     vi.resetModules();
     const { validateConfigObject } = await import("./config.js");

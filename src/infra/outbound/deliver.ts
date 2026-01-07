@@ -7,6 +7,7 @@ import type { ReplyPayload } from "../../auto-reply/types.js";
 import type { ClawdbotConfig } from "../../config/config.js";
 import { sendMessageDiscord } from "../../discord/send.js";
 import { sendMessageIMessage } from "../../imessage/send.js";
+import { sendMessageRocketChat } from "../../rocketchat/send.js";
 import { sendMessageSignal } from "../../signal/send.js";
 import { sendMessageSlack } from "../../slack/send.js";
 import { sendMessageTelegram } from "../../telegram/send.js";
@@ -26,6 +27,7 @@ export type OutboundSendDeps = {
   sendTelegram?: typeof sendMessageTelegram;
   sendDiscord?: typeof sendMessageDiscord;
   sendSlack?: typeof sendMessageSlack;
+  sendRocketChat?: typeof sendMessageRocketChat;
   sendSignal?: typeof sendMessageSignal;
   sendIMessage?: typeof sendMessageIMessage;
 };
@@ -35,6 +37,7 @@ export type OutboundDeliveryResult =
   | { provider: "telegram"; messageId: string; chatId: string }
   | { provider: "discord"; messageId: string; channelId: string }
   | { provider: "slack"; messageId: string; channelId: string }
+  | { provider: "rocketchat"; messageId: string; roomId: string }
   | { provider: "signal"; messageId: string; timestamp?: number }
   | { provider: "imessage"; messageId: string };
 
@@ -48,6 +51,7 @@ const providerCaps: Record<
   telegram: { chunker: chunkMarkdownText },
   discord: { chunker: null },
   slack: { chunker: null },
+  rocketchat: { chunker: chunkMarkdownText },
   signal: { chunker: chunkText },
   imessage: { chunker: chunkText },
 };
@@ -150,6 +154,17 @@ function createProviderHandler(params: {
         ...(await deps.sendSlack(to, caption, { mediaUrl })),
       }),
     },
+    rocketchat: {
+      chunker: providerCaps.rocketchat.chunker,
+      sendText: async (text) => ({
+        provider: "rocketchat",
+        ...(await deps.sendRocketChat(to, text)),
+      }),
+      sendMedia: async (caption, mediaUrl) => ({
+        provider: "rocketchat",
+        ...(await deps.sendRocketChat(to, caption, { mediaUrl })),
+      }),
+    },
     signal: {
       chunker: providerCaps.signal.chunker,
       sendText: async (text) => ({
@@ -199,6 +214,7 @@ export async function deliverOutboundPayloads(params: {
     sendTelegram: params.deps?.sendTelegram ?? sendMessageTelegram,
     sendDiscord: params.deps?.sendDiscord ?? sendMessageDiscord,
     sendSlack: params.deps?.sendSlack ?? sendMessageSlack,
+    sendRocketChat: params.deps?.sendRocketChat ?? sendMessageRocketChat,
     sendSignal: params.deps?.sendSignal ?? sendMessageSignal,
     sendIMessage: params.deps?.sendIMessage ?? sendMessageIMessage,
   };

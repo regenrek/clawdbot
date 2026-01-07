@@ -94,6 +94,28 @@ export type SlackForm = {
   channels: SlackChannelForm[];
 };
 
+export type RocketChatForm = {
+  enabled: boolean;
+  baseUrl: string;
+  authToken: string;
+  userId: string;
+  botUsername: string;
+  alias: string;
+  avatarUrl: string;
+  emoji: string;
+  dmPolicy: "pairing" | "allowlist" | "open" | "disabled";
+  allowFrom: string;
+  groupPolicy: "open" | "allowlist" | "disabled";
+  requireMention: boolean;
+  rooms: string;
+  textChunkLimit: string;
+  mediaMaxMb: string;
+  webhookToken: string;
+  webhookHost: string;
+  webhookPort: string;
+  webhookPath: string;
+};
+
 export const defaultDiscordActions: DiscordActionForm = {
   reactions: true,
   stickers: true,
@@ -168,6 +190,7 @@ export type CronFormState = {
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage";
   to: string;

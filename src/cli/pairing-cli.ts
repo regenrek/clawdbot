@@ -8,6 +8,7 @@ import {
   listProviderPairingRequests,
   type PairingProvider,
 } from "../pairing/pairing-store.js";
+import { sendMessageRocketChat } from "../rocketchat/send.js";
 import { sendMessageSignal } from "../signal/send.js";
 import { sendMessageSlack } from "../slack/send.js";
 import { sendMessageTelegram } from "../telegram/send.js";
@@ -20,6 +21,7 @@ const PROVIDERS: PairingProvider[] = [
   "discord",
   "slack",
   "whatsapp",
+  "rocketchat",
 ];
 
 function parseProvider(raw: unknown): PairingProvider {
@@ -38,7 +40,11 @@ function parseProvider(raw: unknown): PairingProvider {
   );
 }
 
-async function notifyApproved(provider: PairingProvider, id: string) {
+async function notifyApproved(
+  provider: PairingProvider,
+  id: string,
+  entry?: { meta?: Record<string, string> },
+) {
   const message =
     "✅ Clawdbot access approved. Send a message to start chatting.";
   if (provider === "telegram") {
@@ -62,6 +68,15 @@ async function notifyApproved(provider: PairingProvider, id: string) {
   }
   if (provider === "imessage") {
     await sendMessageIMessage(id, message);
+    return;
+  }
+  if (provider === "rocketchat") {
+    const username = entry?.meta?.username?.trim() || id.trim();
+    if (!username) {
+      throw new Error("Rocket.Chat notify requires a username");
+    }
+    const target = username.startsWith("@") ? username : `@${username}`;
+    await sendMessageRocketChat(target, message);
     return;
   }
   // WhatsApp: approval still works (store); notifying requires an active web session.
@@ -121,8 +136,10 @@ export function registerPairingCli(program: Command) {
       console.log(`Approved ${provider} sender ${approved.id}.`);
 
       if (!opts.notify) return;
-      await notifyApproved(provider, approved.id).catch((err) => {
+      await notifyApproved(provider, approved.id, approved.entry).catch(
+        (err) => {
         console.log(`Failed to notify requester: ${String(err)}`);
-      });
+      },
+      );
     });
 }

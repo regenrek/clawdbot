@@ -187,6 +187,7 @@ export function renderCron(props: CronProps) {
                     <option value="telegram">Telegram</option>
                     <option value="discord">Discord</option>
                     <option value="slack">Slack</option>
+                    <option value="rocketchat">Rocket.Chat</option>
                     <option value="signal">Signal</option>
                     <option value="imessage">iMessage</option>
                   </select>

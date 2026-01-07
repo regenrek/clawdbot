@@ -399,11 +399,11 @@ export function buildProgram() {
   program
     .command("send")
     .description(
-      "Send a message (WhatsApp Web, Telegram bot, Discord, Slack, Signal, iMessage)",
+      "Send a message (WhatsApp Web, Telegram bot, Discord, Slack, Rocket.Chat, Signal, iMessage)",
     )
     .requiredOption(
       "-t, --to <number>",
-      "Recipient: E.164 for WhatsApp/Signal, Telegram chat id/@username, Discord channel/user, or iMessage handle/chat_id",
+      "Recipient: E.164 for WhatsApp/Signal, Telegram chat id/@username, Discord channel/user, Slack channel/user, Rocket.Chat room/#channel/@user, or iMessage handle/chat_id",
     )
     .requiredOption("-m, --message <text>", "Message body")
     .option(
@@ -417,7 +417,7 @@ export function buildProgram() {
     )
     .option(
       "--provider <provider>",
-      "Delivery provider: whatsapp|telegram|discord|slack|signal|imessage (default: whatsapp)",
+      "Delivery provider: whatsapp|telegram|discord|slack|rocketchat|signal|imessage (default: whatsapp)",
     )
     .option("--account <id>", "WhatsApp account id (accountId)")
     .option("--dry-run", "Print payload and skip sending", false)
@@ -515,7 +515,7 @@ Examples:
     .option("--verbose <on|off>", "Persist agent verbose level for the session")
     .option(
       "--provider <provider>",
-      "Delivery provider: whatsapp|telegram|discord|slack|signal|imessage (default: whatsapp)",
+      "Delivery provider: whatsapp|telegram|discord|slack|rocketchat|signal|imessage (default: whatsapp)",
     )
     .option(
       "--local",
@@ -644,7 +644,7 @@ Examples:
     .option("--usage", "Show provider usage/quota snapshots", false)
     .option(
       "--deep",
-      "Probe providers (WhatsApp Web + Telegram + Discord + Slack + Signal)",
+      "Probe providers (WhatsApp Web + Telegram + Discord + Slack + Rocket.Chat + Signal)",
       false,
     )
     .option("--timeout <ms>", "Probe timeout in milliseconds", "10000")
@@ -656,7 +656,7 @@ Examples:
   clawdbot status                   # show linked account + session store summary
   clawdbot status --json            # machine-readable output
   clawdbot status --usage           # show provider usage/quota snapshots
-  clawdbot status --deep            # run provider probes (WA + Telegram + Discord + Slack + Signal)
+  clawdbot status --deep            # run provider probes (WA + Telegram + Discord + Slack + Rocket.Chat + Signal)
   clawdbot status --deep --timeout 5000 # tighten probe timeout`,
     )
     .action(async (opts) => {

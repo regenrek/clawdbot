@@ -211,6 +211,20 @@ async function noteSecurityWarnings(cfg: ClawdbotConfig) {
     });
   }
 
+  if (cfg.rocketchat?.enabled !== false) {
+    await warnDmPolicy({
+      label: "Rocket.Chat",
+      provider: "rocketchat",
+      dmPolicy: cfg.rocketchat?.dmPolicy ?? "pairing",
+      allowFrom: cfg.rocketchat?.allowFrom ?? [],
+      allowFromPath: "rocketchat.",
+      approveHint:
+        "Approve via: clawdbot pairing list --provider rocketchat / clawdbot pairing approve --provider rocketchat <code>",
+      normalizeEntry: (raw) =>
+        raw.replace(/^(rocketchat|rc|user):/i, "").replace(/^@/, ""),
+    });
+  }
+
   if (cfg.signal?.enabled !== false) {
     await warnDmPolicy({
       label: "Signal",

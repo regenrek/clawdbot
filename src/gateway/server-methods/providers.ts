@@ -14,6 +14,7 @@ import {
 } from "../../slack/token.js";
 import { probeTelegram, type TelegramProbe } from "../../telegram/probe.js";
 import { resolveTelegramToken } from "../../telegram/token.js";
+import { probeRocketChat } from "../../rocketchat/probe.js";
 import {
   listEnabledWhatsAppAccounts,
   resolveDefaultWhatsAppAccountId,
@@ -119,6 +120,71 @@ export const providersHandlers: GatewayRequestHandlers = {
     if (probe && slackConfigured) {
       slackProbe = await probeSlack(slackBotToken, timeoutMs);
       slackLastProbeAt = Date.now();
+    }
+
+    const rocketchatCfg = cfg.rocketchat;
+    const rocketchatEnabled =
+      Boolean(rocketchatCfg) && rocketchatCfg?.enabled !== false;
+    const rocketchatBaseUrlEnv = rocketchatEnabled
+      ? process.env.ROCKETCHAT_BASE_URL?.trim() || ""
+      : "";
+    const rocketchatBaseUrlConfig = rocketchatEnabled
+      ? rocketchatCfg?.baseUrl?.trim() || ""
+      : "";
+    const rocketchatBaseUrl = rocketchatBaseUrlEnv || rocketchatBaseUrlConfig;
+    const rocketchatBaseUrlSource = rocketchatBaseUrlEnv
+      ? "env"
+      : rocketchatBaseUrlConfig
+        ? "config"
+        : "none";
+
+    const rocketchatAuthTokenEnv = rocketchatEnabled
+      ? process.env.ROCKETCHAT_AUTH_TOKEN?.trim() || ""
+      : "";
+    const rocketchatAuthTokenConfig = rocketchatEnabled
+      ? rocketchatCfg?.authToken?.trim() || ""
+      : "";
+    const rocketchatAuthToken = rocketchatAuthTokenEnv || rocketchatAuthTokenConfig;
+    const rocketchatAuthTokenSource = rocketchatAuthTokenEnv
+      ? "env"
+      : rocketchatAuthTokenConfig
+        ? "config"
+        : "none";
+
+    const rocketchatUserIdEnv = rocketchatEnabled
+      ? process.env.ROCKETCHAT_USER_ID?.trim() || ""
+      : "";
+    const rocketchatUserIdConfig = rocketchatEnabled
+      ? rocketchatCfg?.userId?.trim() || ""
+      : "";
+    const rocketchatUserId = rocketchatUserIdEnv || rocketchatUserIdConfig;
+    const rocketchatUserIdSource = rocketchatUserIdEnv
+      ? "env"
+      : rocketchatUserIdConfig
+        ? "config"
+        : "none";
+    const rocketchatWebhookToken = rocketchatEnabled
+      ? rocketchatCfg?.webhook?.token?.trim() || ""
+      : "";
+    const rocketchatConfigured =
+      rocketchatEnabled &&
+      Boolean(
+        rocketchatBaseUrl &&
+          rocketchatAuthToken &&
+          rocketchatUserId &&
+          rocketchatWebhookToken,
+      );
+    let rocketchatProbe: Awaited<ReturnType<typeof probeRocketChat>> | undefined;
+    let rocketchatLastProbeAt: number | null = null;
+    if (probe && rocketchatConfigured) {
+      rocketchatProbe = await probeRocketChat(
+        rocketchatBaseUrl,
+        rocketchatAuthToken,
+        rocketchatUserId,
+        timeoutMs,
+        rocketchatCfg?.retry,
+      );
+      rocketchatLastProbeAt = Date.now();
     }
 
     const signalCfg = cfg.signal;
@@ -256,6 +322,19 @@ export const providersHandlers: GatewayRequestHandlers = {
           lastError: runtime.slack.lastError ?? null,
           probe: slackProbe,
           lastProbeAt: slackLastProbeAt,
+        },
+        rocketchat: {
+          configured: rocketchatConfigured,
+          baseUrl: rocketchatBaseUrl || null,
+          baseUrlSource: rocketchatBaseUrlSource,
+          authTokenSource: rocketchatAuthTokenSource,
+          userIdSource: rocketchatUserIdSource,
+          running: runtime.rocketchat.running,
+          lastStartAt: runtime.rocketchat.lastStartAt ?? null,
+          lastStopAt: runtime.rocketchat.lastStopAt ?? null,
+          lastError: runtime.rocketchat.lastError ?? null,
+          probe: rocketchatProbe,
+          lastProbeAt: rocketchatLastProbeAt,
         },
         signal: {
           configured: signalConfigured,
