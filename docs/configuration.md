@@ -414,6 +414,29 @@ Reaction notification modes:
 - `all`: all reactions on all messages.
 - `allowlist`: reactions from `guilds.<id>.users` on all messages (empty list disables).
 
+### `rocketchat` (outbound REST)
+
+Rocket.Chat is currently **outbound-only** (used by `clawdbot send --provider rocketchat …` and `clawdbot agent --deliver --provider rocketchat …`).
+
+The API credentials are resolved from `ROCKETCHAT_URL`, `ROCKETCHAT_USER_ID`, `ROCKETCHAT_AUTH_TOKEN` or `rocketchat.baseUrl`, `rocketchat.userId`, `rocketchat.authToken`.
+
+Recipients:
+- `#channel` or `@user` for text
+- `rid:<roomId>` is recommended when sending media (upload endpoint requires a room id)
+
+```json5
+{
+  rocketchat: {
+    enabled: true,
+    baseUrl: "https://chat.example.com",
+    userId: "your-user-id",
+    authToken: "your-auth-token",
+    textChunkLimit: 4000,
+    mediaMaxMb: 20
+  }
+}
+```
+
 ### `slack` (socket mode)
 
 Slack runs in Socket Mode and requires both a bot token and app token:

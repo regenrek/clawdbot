@@ -49,6 +49,14 @@ import { resolveSendPolicy } from "../sessions/send-policy.js";
 import { resolveTelegramToken } from "../telegram/token.js";
 import { normalizeE164 } from "../utils.js";
 
+function normalizeSurface(raw?: string): string | undefined {
+  const value = raw?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (value === "imsg") return "imessage";
+  if (value === "rc" || value === "rocket.chat") return "rocketchat";
+  return value;
+}
+
 type AgentCommandOpts = {
   message: string;
   to?: string;
@@ -227,11 +235,12 @@ export async function agentCommand(
   }
 
   if (opts.deliver === true) {
+    const deliverySurface = normalizeSurface(opts.provider ?? "whatsapp");
     const sendPolicy = resolveSendPolicy({
       cfg,
       entry: sessionEntry,
       sessionKey,
-      surface: sessionEntry?.surface,
+      surface: deliverySurface ?? sessionEntry?.surface,
       chatType: sessionEntry?.chatType,
     });
     if (sendPolicy === "deny") {
@@ -380,12 +389,7 @@ export async function agentCommand(
   let fallbackModel = model;
   try {
     const surface =
-      opts.surface?.trim().toLowerCase() ||
-      (() => {
-        const raw = opts.provider?.trim().toLowerCase();
-        if (!raw) return undefined;
-        return raw === "imsg" ? "imessage" : raw;
-      })();
+      normalizeSurface(opts.surface) ?? normalizeSurface(opts.provider);
     const fallbackResult = await runWithModelFallback({
       cfg,
       provider,
@@ -498,13 +502,13 @@ export async function agentCommand(
   const payloads = result.payloads ?? [];
   const deliver = opts.deliver === true;
   const bestEffortDeliver = opts.bestEffortDeliver === true;
-  const deliveryProviderRaw = (opts.provider ?? "whatsapp").toLowerCase();
-  const deliveryProvider =
-    deliveryProviderRaw === "imsg" ? "imessage" : deliveryProviderRaw;
+  const deliveryProvider = normalizeSurface(opts.provider ?? "whatsapp") ??
+    "whatsapp";
 
   const whatsappTarget = opts.to ? normalizeE164(opts.to) : allowFrom[0];
   const telegramTarget = opts.to?.trim() || undefined;
   const discordTarget = opts.to?.trim() || undefined;
+  const rocketchatTarget = opts.to?.trim() || undefined;
   const slackTarget = opts.to?.trim() || undefined;
   const signalTarget = opts.to?.trim() || undefined;
   const imessageTarget = opts.to?.trim() || undefined;
@@ -517,13 +521,15 @@ export async function agentCommand(
           ? whatsappTarget
           : deliveryProvider === "discord"
             ? discordTarget
-            : deliveryProvider === "slack"
-              ? slackTarget
-              : deliveryProvider === "signal"
-                ? signalTarget
-                : deliveryProvider === "imessage"
-                  ? imessageTarget
-                  : undefined;
+            : deliveryProvider === "rocketchat"
+              ? rocketchatTarget
+              : deliveryProvider === "slack"
+                ? slackTarget
+                : deliveryProvider === "signal"
+                  ? signalTarget
+                  : deliveryProvider === "imessage"
+                    ? imessageTarget
+                    : undefined;
     const message = `Delivery failed (${deliveryProvider}${deliveryTarget ? ` to ${deliveryTarget}` : ""}): ${String(err)}`;
     runtime.error?.(message);
     if (!runtime.error) runtime.log(message);
@@ -545,6 +551,13 @@ export async function agentCommand(
     if (deliveryProvider === "discord" && !discordTarget) {
       const err = new Error(
         "Delivering to Discord requires --to <channelId|user:ID|channel:ID>",
+      );
+      if (!bestEffortDeliver) throw err;
+      logDeliveryError(err);
+    }
+    if (deliveryProvider === "rocketchat" && !rocketchatTarget) {
+      const err = new Error(
+        "Delivering to Rocket.Chat requires --to <#channel|@user|rid:roomId>",
       );
       if (!bestEffortDeliver) throw err;
       logDeliveryError(err);
@@ -581,6 +594,7 @@ export async function agentCommand(
       deliveryProvider !== "whatsapp" &&
       deliveryProvider !== "telegram" &&
       deliveryProvider !== "discord" &&
+      deliveryProvider !== "rocketchat" &&
       deliveryProvider !== "slack" &&
       deliveryProvider !== "signal" &&
       deliveryProvider !== "imessage" &&
@@ -619,6 +633,7 @@ export async function agentCommand(
     deliveryProvider === "whatsapp" ||
     deliveryProvider === "telegram" ||
     deliveryProvider === "discord" ||
+    deliveryProvider === "rocketchat" ||
     deliveryProvider === "slack" ||
     deliveryProvider === "signal" ||
     deliveryProvider === "imessage"
@@ -702,6 +717,28 @@ export async function agentCommand(
             first = false;
             await deps.sendMessageDiscord(discordTarget, caption, {
               token: process.env.DISCORD_BOT_TOKEN,
+              mediaUrl: url,
+            });
+          }
+        }
+      } catch (err) {
+        if (!bestEffortDeliver) throw err;
+        logDeliveryError(err);
+      }
+    }
+
+    if (deliveryProvider === "rocketchat" && rocketchatTarget) {
+      try {
+        if (media.length === 0) {
+          for (const chunk of chunkText(text, deliveryTextLimit)) {
+            await deps.sendMessageRocketChat(rocketchatTarget, chunk);
+          }
+        } else {
+          let first = true;
+          for (const url of media) {
+            const caption = first ? text : "";
+            first = false;
+            await deps.sendMessageRocketChat(rocketchatTarget, caption, {
               mediaUrl: url,
             });
           }

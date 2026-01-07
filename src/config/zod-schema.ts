@@ -807,6 +807,16 @@ export const ClawdbotSchema = z.object({
         .optional(),
     })
     .optional(),
+  rocketchat: z
+    .object({
+      enabled: z.boolean().optional(),
+      baseUrl: z.string().optional(),
+      userId: z.string().optional(),
+      authToken: z.string().optional(),
+      textChunkLimit: z.number().int().positive().optional(),
+      mediaMaxMb: z.number().positive().optional(),
+    })
+    .optional(),
   slack: z
     .object({
       enabled: z.boolean().optional(),
