@@ -345,7 +345,7 @@ Run multiple isolated agents (separate workspace, `agentDir`, sessions) inside o
     - `scope`: `"session"` | `"agent"` | `"shared"`
     - `workspaceRoot`: custom sandbox workspace root
     - `tools`: per-agent sandbox tool policy (deny wins; overrides `agent.sandbox.tools`)
-  - `tools`: per-agent tool restrictions (applied before sandbox tool policy).
+  - `tools`: per-agent tool restrictions (overrides `agent.tools`; applied before sandbox tool policy).
     - `allow`: array of allowed tool names
     - `deny`: array of denied tool names (deny wins)
 - `routing.bindings[]`: routes inbound messages to an `agentId`.
@@ -1046,6 +1046,14 @@ Block streaming:
   ```
 See [/concepts/streaming](/concepts/streaming) for behavior + chunking details.
 
+Typing indicators:
+- `agent.typingMode`: `"never" | "instant" | "thinking" | "message"`. Defaults to
+  `instant` for direct chats / mentions and `message` for unmentioned group chats.
+- `session.typingMode`: per-session override for the mode.
+- `agent.typingIntervalSeconds`: how often the typing signal is refreshed (default: 6s).
+- `session.typingIntervalSeconds`: per-session override for the refresh interval.
+See [/concepts/typing-indicators](/concepts/typing-indicators) for behavior details.
+
 `agent.model.primary` should be set as `provider/model` (e.g. `anthropic/claude-opus-4-5`).
 Aliases come from `agent.models.*.alias` (e.g. `Opus`).
 If you omit the provider, CLAWDBOT currently assumes `anthropic` as a temporary
@@ -1636,6 +1644,8 @@ Defaults:
         sessionKey: "hook:gmail:{{messages[0].id}}",
         messageTemplate:
           "From: {{messages[0].from}}\nSubject: {{messages[0].subject}}\n{{messages[0].snippet}}",
+        deliver: true,
+        provider: "last",
       },
     ],
   }
@@ -1659,6 +1669,8 @@ Mapping notes:
 - `match.source` matches a payload field (e.g. `{ source: "gmail" }`) so you can use a generic `/hooks/ingest` path.
 - Templates like `{{messages[0].subject}}` read from the payload.
 - `transform` can point to a JS/TS module that returns a hook action.
+- `deliver: true` sends the final reply to a provider; `provider` defaults to `last` (falls back to WhatsApp).
+- If there is no prior delivery route, set `provider` + `to` explicitly (required for Telegram/Discord/Slack/Signal/iMessage).
 
 Gmail helper config (used by `clawdbot hooks gmail setup` / `run`):
 

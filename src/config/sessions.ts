@@ -14,7 +14,51 @@ import {
   parseAgentSessionKey,
 } from "../routing/session-key.js";
 import { normalizeE164 } from "../utils.js";
+import {
+  getFileMtimeMs,
+  isCacheEnabled,
+  resolveCacheTtlMs,
+} from "./cache-utils.js";
 import { resolveStateDir } from "./paths.js";
+
+// ============================================================================
+// Session Store Cache with TTL Support
+// ============================================================================
+
+type SessionStoreCacheEntry = {
+  store: Record<string, SessionEntry>;
+  loadedAt: number;
+  storePath: string;
+  mtimeMs?: number;
+};
+
+const SESSION_STORE_CACHE = new Map<string, SessionStoreCacheEntry>();
+const DEFAULT_SESSION_STORE_TTL_MS = 45_000; // 45 seconds (between 30-60s)
+
+function getSessionStoreTtl(): number {
+  return resolveCacheTtlMs({
+    envValue: process.env.CLAWDBOT_SESSION_CACHE_TTL_MS,
+    defaultTtlMs: DEFAULT_SESSION_STORE_TTL_MS,
+  });
+}
+
+function isSessionStoreCacheEnabled(): boolean {
+  return isCacheEnabled(getSessionStoreTtl());
+}
+
+function isSessionStoreCacheValid(entry: SessionStoreCacheEntry): boolean {
+  const now = Date.now();
+  const ttl = getSessionStoreTtl();
+  return now - entry.loadedAt <= ttl;
+}
+
+function invalidateSessionStoreCache(storePath: string): void {
+  SESSION_STORE_CACHE.delete(storePath);
+}
+
+export function clearSessionStoreCacheForTest(): void {
+  SESSION_STORE_CACHE.clear();
+}
 
 export type SessionScope = "per-sender" | "global";
 
@@ -134,8 +178,13 @@ export const DEFAULT_IDLE_MINUTES = 60;
 export function resolveSessionTranscriptPath(
   sessionId: string,
   agentId?: string,
+  topicId?: number,
 ): string {
-  return path.join(resolveAgentSessionsDir(agentId), `${sessionId}.jsonl`);
+  const fileName =
+    topicId !== undefined
+      ? `${sessionId}-topic-${topicId}.jsonl`
+      : `${sessionId}.jsonl`;
+  return path.join(resolveAgentSessionsDir(agentId), fileName);
 }
 
 export function resolveSessionFilePath(
@@ -340,22 +389,53 @@ export function resolveGroupSessionKey(
 export function loadSessionStore(
   storePath: string,
 ): Record<string, SessionEntry> {
+  // Check cache first if enabled
+  if (isSessionStoreCacheEnabled()) {
+    const cached = SESSION_STORE_CACHE.get(storePath);
+    if (cached && isSessionStoreCacheValid(cached)) {
+      const currentMtimeMs = getFileMtimeMs(storePath);
+      if (currentMtimeMs === cached.mtimeMs) {
+        // Return a shallow copy to prevent external mutations affecting cache
+        return { ...cached.store };
+      }
+      invalidateSessionStoreCache(storePath);
+    }
+  }
+
+  // Cache miss or disabled - load from disk
+  let store: Record<string, SessionEntry> = {};
+  let mtimeMs = getFileMtimeMs(storePath);
   try {
     const raw = fs.readFileSync(storePath, "utf-8");
     const parsed = JSON5.parse(raw);
     if (parsed && typeof parsed === "object") {
-      return parsed as Record<string, SessionEntry>;
+      store = parsed as Record<string, SessionEntry>;
     }
+    mtimeMs = getFileMtimeMs(storePath) ?? mtimeMs;
   } catch {
     // ignore missing/invalid store; we'll recreate it
   }
-  return {};
+
+  // Cache the result if caching is enabled
+  if (isSessionStoreCacheEnabled()) {
+    SESSION_STORE_CACHE.set(storePath, {
+      store: { ...store }, // Store a copy to prevent external mutations
+      loadedAt: Date.now(),
+      storePath,
+      mtimeMs,
+    });
+  }
+
+  return store;
 }
 
 export async function saveSessionStore(
   storePath: string,
   store: Record<string, SessionEntry>,
 ) {
+  // Invalidate cache on write to ensure consistency
+  invalidateSessionStoreCache(storePath);
+
   await fs.promises.mkdir(path.dirname(storePath), { recursive: true });
   const json = JSON.stringify(store, null, 2);
   const tmp = `${storePath}.${process.pid}.${crypto.randomUUID()}.tmp`;

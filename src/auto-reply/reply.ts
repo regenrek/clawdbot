@@ -65,6 +65,10 @@ import {
   prependSystemEvents,
 } from "./reply/session-updates.js";
 import { createTypingController } from "./reply/typing.js";
+import {
+  createTypingSignaler,
+  resolveTypingMode,
+} from "./reply/typing-mode.js";
 import type { MsgContext, TemplateContext } from "./templating.js";
 import {
   type ElevatedLevel,
@@ -598,7 +602,17 @@ export async function getReplyFromConfig(
   const isGroupChat = sessionCtx.ChatType === "group";
   const wasMentioned = ctx.WasMentioned === true;
   const isHeartbeat = opts?.isHeartbeat === true;
-  const shouldEagerType = (!isGroupChat || wasMentioned) && !isHeartbeat;
+  const typingMode = resolveTypingMode({
+    configured: sessionCfg?.typingMode ?? agentCfg?.typingMode,
+    isGroupChat,
+    wasMentioned,
+    isHeartbeat,
+  });
+  const typingSignals = createTypingSignaler({
+    typing,
+    mode: typingMode,
+    isHeartbeat,
+  });
   const shouldInjectGroupIntro = Boolean(
     isGroupChat &&
       (isFirstTurnInSession || sessionEntry?.groupActivationNeedsSystemIntro),
@@ -792,8 +806,8 @@ export async function getReplyFromConfig(
     },
   };
 
-  if (shouldEagerType) {
-    await typing.startTypingLoop();
+  if (typingSignals.shouldStartImmediately) {
+    await typingSignals.signalRunStart();
   }
 
   return runReplyAgent({
@@ -820,6 +834,7 @@ export async function getReplyFromConfig(
     resolvedBlockStreamingBreak,
     sessionCtx,
     shouldInjectGroupIntro,
+    typingMode,
   });
 }
 

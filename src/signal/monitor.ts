@@ -15,9 +15,10 @@ import {
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { normalizeE164 } from "../utils.js";
-import { signalCheck, signalRpcRequest, streamSignalEvents } from "./client.js";
+import { signalCheck, signalRpcRequest } from "./client.js";
 import { spawnSignalDaemon } from "./daemon.js";
 import { sendMessageSignal } from "./send.js";
+import { runSignalSseLoop } from "./sse-reconnect.js";
 
 type SignalEnvelope = {
   sourceNumber?: string | null;
@@ -524,10 +525,11 @@ export async function monitorSignalProvider(
       if (!queuedFinal) return;
     };
 
-    await streamSignalEvents({
+    await runSignalSseLoop({
       baseUrl,
       account,
       abortSignal: opts.abortSignal,
+      runtime,
       onEvent: (event) => {
         void handleEvent(event).catch((err) => {
           runtime.error?.(`event handler failed: ${String(err)}`);

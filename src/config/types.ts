@@ -1,4 +1,5 @@
 export type ReplyMode = "text" | "command";
+export type TypingMode = "never" | "instant" | "thinking" | "message";
 export type SessionScope = "per-sender" | "global";
 export type ReplyToMode = "off" | "first" | "all";
 export type GroupPolicy = "open" | "disabled" | "allowlist";
@@ -37,6 +38,7 @@ export type SessionConfig = {
   heartbeatIdleMinutes?: number;
   store?: string;
   typingIntervalSeconds?: number;
+  typingMode?: TypingMode;
   mainKey?: string;
   sendPolicy?: SessionSendPolicyConfig;
   agentToAgent?: {
@@ -1037,6 +1039,8 @@ export type ClawdbotConfig = {
     /** Max inbound media size in MB for agent-visible attachments (text note or future image attach). */
     mediaMaxMb?: number;
     typingIntervalSeconds?: number;
+    /** Typing indicator start mode (never|instant|thinking|message). */
+    typingMode?: TypingMode;
     /** Periodic background heartbeat runs. */
     heartbeat?: {
       /** Heartbeat interval (duration string, default unit: minutes; default: 30m). */

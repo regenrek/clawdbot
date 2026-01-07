@@ -25,6 +25,7 @@ import type {
   VerboseLevel,
 } from "../auto-reply/thinking.js";
 import { formatToolAggregate } from "../auto-reply/tool-meta.js";
+import { isCacheEnabled, resolveCacheTtlMs } from "../config/cache-utils.js";
 import type { ClawdbotConfig } from "../config/config.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
 import { createSubsystemLogger } from "../logging.js";
@@ -65,6 +66,7 @@ import {
   pickFallbackThinkingLevel,
   sanitizeGoogleTurnOrdering,
   sanitizeSessionMessagesImages,
+  validateGeminiTurns,
 } from "./pi-embedded-helpers.js";
 import {
   type BlockReplyChunking,
@@ -325,6 +327,66 @@ type EmbeddedRunWaiter = {
   timer: NodeJS.Timeout;
 };
 const EMBEDDED_RUN_WAITERS = new Map<string, Set<EmbeddedRunWaiter>>();
+
+// ============================================================================
+// SessionManager Pre-warming Cache
+// ============================================================================
+
+type SessionManagerCacheEntry = {
+  sessionFile: string;
+  loadedAt: number;
+};
+
+const SESSION_MANAGER_CACHE = new Map<string, SessionManagerCacheEntry>();
+const DEFAULT_SESSION_MANAGER_TTL_MS = 45_000; // 45 seconds
+
+function getSessionManagerTtl(): number {
+  return resolveCacheTtlMs({
+    envValue: process.env.CLAWDBOT_SESSION_MANAGER_CACHE_TTL_MS,
+    defaultTtlMs: DEFAULT_SESSION_MANAGER_TTL_MS,
+  });
+}
+
+function isSessionManagerCacheEnabled(): boolean {
+  return isCacheEnabled(getSessionManagerTtl());
+}
+
+function trackSessionManagerAccess(sessionFile: string): void {
+  if (!isSessionManagerCacheEnabled()) return;
+  const now = Date.now();
+  SESSION_MANAGER_CACHE.set(sessionFile, {
+    sessionFile,
+    loadedAt: now,
+  });
+}
+
+function isSessionManagerCached(sessionFile: string): boolean {
+  if (!isSessionManagerCacheEnabled()) return false;
+  const entry = SESSION_MANAGER_CACHE.get(sessionFile);
+  if (!entry) return false;
+  const now = Date.now();
+  const ttl = getSessionManagerTtl();
+  return now - entry.loadedAt <= ttl;
+}
+
+async function prewarmSessionFile(sessionFile: string): Promise<void> {
+  if (!isSessionManagerCacheEnabled()) return;
+  if (isSessionManagerCached(sessionFile)) return;
+
+  try {
+    // Read a small chunk to encourage OS page cache warmup.
+    const handle = await fs.open(sessionFile, "r");
+    try {
+      const buffer = Buffer.alloc(4096);
+      await handle.read(buffer, 0, buffer.length, 0);
+    } finally {
+      await handle.close();
+    }
+    trackSessionManagerAccess(sessionFile);
+  } catch {
+    // File doesn't exist yet, SessionManager will create it
+  }
+}
 
 const isAbortError = (err: unknown): boolean => {
   if (!err || typeof err !== "object") return false;
@@ -736,7 +798,10 @@ export async function compactEmbeddedPiSession(params: {
           tools,
         });
 
+        // Pre-warm session file to bring it into OS page cache
+        await prewarmSessionFile(params.sessionFile);
         const sessionManager = SessionManager.open(params.sessionFile);
+        trackSessionManagerAccess(params.sessionFile);
         const settingsManager = SettingsManager.create(
           effectiveWorkspace,
           agentDir,
@@ -780,8 +845,9 @@ export async function compactEmbeddedPiSession(params: {
             sessionManager,
             sessionId: params.sessionId,
           });
-          if (prior.length > 0) {
-            session.agent.replaceMessages(prior);
+          const validated = validateGeminiTurns(prior);
+          if (validated.length > 0) {
+            session.agent.replaceMessages(validated);
           }
           const result = await session.compact(params.customInstructions);
           return {
@@ -1057,7 +1123,10 @@ export async function runEmbeddedPiAgent(params: {
             tools,
           });
 
+          // Pre-warm session file to bring it into OS page cache
+          await prewarmSessionFile(params.sessionFile);
           const sessionManager = SessionManager.open(params.sessionFile);
+          trackSessionManagerAccess(params.sessionFile);
           const settingsManager = SettingsManager.create(
             effectiveWorkspace,
             agentDir,
@@ -1105,8 +1174,9 @@ export async function runEmbeddedPiAgent(params: {
               sessionManager,
               sessionId: params.sessionId,
             });
-            if (prior.length > 0) {
-              session.agent.replaceMessages(prior);
+            const validated = validateGeminiTurns(prior);
+            if (validated.length > 0) {
+              session.agent.replaceMessages(validated);
             }
           } catch (err) {
             session.dispose();
