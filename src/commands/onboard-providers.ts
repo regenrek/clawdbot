@@ -53,13 +53,13 @@ async function noteProviderPrimer(prompter: WizardPrompter): Promise<void> {
       'Public DMs require dmPolicy="open" + allowFrom=["*"].',
       "Docs: https://docs.clawd.bot/start/pairing",
       "",
-      "WhatsApp: links via WhatsApp Web (scan QR), stores creds for future sends.",
-      "WhatsApp: dedicated second number recommended; primary number OK (self-chat).",
-      "Telegram: Bot API (token from @BotFather), replies via your bot.",
-      "Discord: Bot token from Discord Developer Portal; invite bot to your server.",
-      "Slack: Socket Mode app token + bot token, DMs via App Home Messages tab.",
-      "Signal: signal-cli as a linked device; separate number recommended.",
-      "iMessage: local imsg CLI; separate Apple ID recommended only on a separate Mac.",
+      "Telegram: easiest start — register a bot with @BotFather, paste token, go.",
+      "WhatsApp: links via WhatsApp Web (scan QR); recommend a separate phone + eSIM.",
+      "Discord: bot token from Developer Portal; invite bot to your server.",
+      "Slack: supported (Socket Mode app token + bot token).",
+      "Rocket.Chat: outgoing webhook + REST API token; use a bot user account.",
+      "Signal: signal-cli linked device; more setup (if you want easy, hop on Discord).",
+      "iMessage: local imsg CLI; work in progress.",
     ].join("\n"),
     "How providers work",
   );
@@ -182,6 +182,22 @@ async function noteSlackTokenHelp(
   );
 }
 
+async function noteRocketChatHelp(prompter: WizardPrompter): Promise<void> {
+  await prompter.note(
+    [
+      "1) Create a Rocket.Chat bot user (or dedicated service user).",
+      "2) Administration → Users → select bot → Personal Access Tokens.",
+      "   - Create token, copy Auth Token + User ID.",
+      "3) Administration → Integrations → New → Outgoing Webhook.",
+      "   - Use the token you will enter below.",
+      "   - Set URL to your gateway webhook (host/port/path).",
+      "4) Ensure the bot user is in the rooms you want it to post to.",
+      "Docs: https://docs.clawd.bot/providers/rocketchat",
+    ].join("\n"),
+    "Rocket.Chat setup",
+  );
+}
+
 function setWhatsAppDmPolicy(
   cfg: ClawdbotConfig,
   dmPolicy?: DmPolicy,
@@ -287,6 +303,21 @@ function setSlackDmPolicy(cfg: ClawdbotConfig, dmPolicy: DmPolicy) {
   };
 }
 
+function setRocketChatDmPolicy(cfg: ClawdbotConfig, dmPolicy: DmPolicy) {
+  const allowFrom =
+    dmPolicy === "open"
+      ? addWildcardAllowFrom(cfg.rocketchat?.allowFrom)
+      : undefined;
+  return {
+    ...cfg,
+    rocketchat: {
+      ...cfg.rocketchat,
+      dmPolicy,
+      ...(allowFrom ? { allowFrom } : {}),
+    },
+  };
+}
+
 function setSignalDmPolicy(cfg: ClawdbotConfig, dmPolicy: DmPolicy) {
   const allowFrom =
     dmPolicy === "open"
@@ -324,7 +355,9 @@ async function maybeConfigureDmPolicies(params: {
 }): Promise<ClawdbotConfig> {
   const { selection, prompter } = params;
   const supportsDmPolicy = selection.some((p) =>
-    ["telegram", "discord", "slack", "signal", "imessage"].includes(p),
+    ["telegram", "discord", "slack", "rocketchat", "signal", "imessage"].includes(
+      p,
+    ),
   );
   if (!supportsDmPolicy) return params.cfg;
 
@@ -389,6 +422,16 @@ async function maybeConfigureDmPolicies(params: {
       allowFromKey: "slack.dm.allowFrom",
     });
     if (policy !== current) cfg = setSlackDmPolicy(cfg, policy);
+  }
+  if (selection.includes("rocketchat")) {
+    const current = cfg.rocketchat?.dmPolicy ?? "pairing";
+    const policy = await selectPolicy({
+      label: "Rocket.Chat",
+      provider: "rocketchat",
+      policyKey: "rocketchat.dmPolicy",
+      allowFromKey: "rocketchat.allowFrom",
+    });
+    if (policy !== current) cfg = setRocketChatDmPolicy(cfg, policy);
   }
   if (selection.includes("signal")) {
     const current = cfg.signal?.dmPolicy ?? "pairing";
@@ -586,6 +629,10 @@ export async function setupProviders(
   const discordEnv = Boolean(process.env.DISCORD_BOT_TOKEN?.trim());
   const slackBotEnv = Boolean(process.env.SLACK_BOT_TOKEN?.trim());
   const slackAppEnv = Boolean(process.env.SLACK_APP_TOKEN?.trim());
+  const rocketchatBaseUrlEnv = process.env.ROCKETCHAT_BASE_URL?.trim() || "";
+  const rocketchatAuthTokenEnv =
+    process.env.ROCKETCHAT_AUTH_TOKEN?.trim() || "";
+  const rocketchatUserIdEnv = process.env.ROCKETCHAT_USER_ID?.trim() || "";
   const telegramConfigured = Boolean(
     telegramEnv || cfg.telegram?.botToken || cfg.telegram?.tokenFile,
   );
@@ -593,6 +640,12 @@ export async function setupProviders(
   const slackConfigured = Boolean(
     (slackBotEnv && slackAppEnv) ||
       (cfg.slack?.botToken && cfg.slack?.appToken),
+  );
+  const rocketchatConfigured = Boolean(
+    (rocketchatBaseUrlEnv || cfg.rocketchat?.baseUrl) &&
+      (rocketchatAuthTokenEnv || cfg.rocketchat?.authToken) &&
+      (rocketchatUserIdEnv || cfg.rocketchat?.userId) &&
+      cfg.rocketchat?.webhook?.token,
   );
   const signalConfigured = Boolean(
     cfg.signal?.account || cfg.signal?.httpUrl || cfg.signal?.httpPort,
@@ -609,10 +662,11 @@ export async function setupProviders(
     whatsappAccountId === DEFAULT_ACCOUNT_ID ? "default" : whatsappAccountId;
   await prompter.note(
     [
-      `WhatsApp (${waAccountLabel}): ${whatsappLinked ? "linked" : "not linked"}`,
       `Telegram: ${telegramConfigured ? "configured" : "needs token"}`,
+      `WhatsApp (${waAccountLabel}): ${whatsappLinked ? "linked" : "not linked"}`,
       `Discord: ${discordConfigured ? "configured" : "needs token"}`,
       `Slack: ${slackConfigured ? "configured" : "needs tokens"}`,
+      `Rocket.Chat: ${rocketchatConfigured ? "configured" : "needs setup"}`,
       `Signal: ${signalConfigured ? "configured" : "needs setup"}`,
       `iMessage: ${imessageConfigured ? "configured" : "needs setup"}`,
       `signal-cli: ${signalCliDetected ? "found" : "missing"} (${signalCliPath})`,
@@ -633,14 +687,16 @@ export async function setupProviders(
     message: "Select providers",
     options: [
       {
+        value: "telegram",
+        label: "Telegram (Bot API)",
+        hint: telegramConfigured
+          ? "easy start · configured"
+          : "easy start · needs token",
+      },
+      {
         value: "whatsapp",
         label: "WhatsApp (QR link)",
         hint: whatsappLinked ? "linked" : "not linked",
-      },
-      {
-        value: "telegram",
-        label: "Telegram (Bot API)",
-        hint: telegramConfigured ? "configured" : "needs token",
       },
       {
         value: "discord",
@@ -651,6 +707,11 @@ export async function setupProviders(
         value: "slack",
         label: "Slack (Socket Mode)",
         hint: slackConfigured ? "configured" : "needs tokens",
+      },
+      {
+        value: "rocketchat",
+        label: "Rocket.Chat (Webhook + REST)",
+        hint: rocketchatConfigured ? "configured" : "needs setup",
       },
       {
         value: "signal",
@@ -666,6 +727,29 @@ export async function setupProviders(
   })) as ProviderChoice[];
 
   options?.onSelection?.(selection);
+
+  const selectionNotes: Record<ProviderChoice, string> = {
+    telegram:
+      "Telegram — easiest start: register a bot with @BotFather and paste the token. Docs: https://docs.clawd.bot/telegram",
+    whatsapp:
+      "WhatsApp — works with your own number; recommend a separate phone + eSIM. Docs: https://docs.clawd.bot/whatsapp",
+    discord:
+      "Discord — very well supported right now. Docs: https://docs.clawd.bot/discord",
+    slack:
+      "Slack — supported (Socket Mode). Docs: https://docs.clawd.bot/slack",
+    rocketchat:
+      "Rocket.Chat — outbound webhook + REST API token. Docs: https://docs.clawd.bot/providers/rocketchat",
+    signal:
+      "Signal — signal-cli linked device; more setup (if you want easy, hop on Discord). Docs: https://docs.clawd.bot/signal",
+    imessage:
+      "iMessage — this is still a work in progress. Docs: https://docs.clawd.bot/imessage",
+  };
+  const selectedLines = selection
+    .map((provider) => selectionNotes[provider])
+    .filter(Boolean);
+  if (selectedLines.length > 0) {
+    await prompter.note(selectedLines.join("\n"), "Selected providers");
+  }
 
   let next = cfg;
 
@@ -971,6 +1055,82 @@ export async function setupProviders(
     }
   }
 
+  if (selection.includes("rocketchat")) {
+    if (!rocketchatConfigured) {
+      await noteRocketChatHelp(prompter);
+    }
+
+    const baseUrl =
+      rocketchatBaseUrlEnv ||
+      cfg.rocketchat?.baseUrl?.trim() ||
+      String(
+        await prompter.text({
+          message: "Rocket.Chat base URL",
+          placeholder: "https://chat.example.com",
+          validate: (value) => (value?.trim() ? undefined : "Required"),
+        }),
+      ).trim();
+
+    const authToken =
+      rocketchatAuthTokenEnv ||
+      cfg.rocketchat?.authToken?.trim() ||
+      String(
+        await prompter.text({
+          message: "Rocket.Chat Auth Token (X-Auth-Token)",
+          validate: (value) => (value?.trim() ? undefined : "Required"),
+        }),
+      ).trim();
+
+    const userId =
+      rocketchatUserIdEnv ||
+      cfg.rocketchat?.userId?.trim() ||
+      String(
+        await prompter.text({
+          message: "Rocket.Chat User ID (X-User-Id)",
+          validate: (value) => (value?.trim() ? undefined : "Required"),
+        }),
+      ).trim();
+
+    const webhookToken =
+      cfg.rocketchat?.webhook?.token?.trim() ||
+      String(
+        await prompter.text({
+          message: "Outgoing webhook token (Rocket.Chat)",
+          validate: (value) => (value?.trim() ? undefined : "Required"),
+        }),
+      ).trim();
+
+    const botUsername = String(
+      await prompter.text({
+        message: "Bot username (optional, used for mention gating)",
+        initialValue: cfg.rocketchat?.botUsername ?? "",
+      }),
+    ).trim();
+
+    const webhook = {
+      ...(typeof cfg.rocketchat?.webhook === "object"
+        ? (cfg.rocketchat?.webhook as Record<string, unknown>)
+        : {}),
+    };
+    if (webhookToken) webhook.token = webhookToken;
+
+    const nextRocketChat: Record<string, unknown> = {
+      ...cfg.rocketchat,
+      enabled: true,
+    };
+    if (!rocketchatBaseUrlEnv && baseUrl) nextRocketChat.baseUrl = baseUrl;
+    if (!rocketchatAuthTokenEnv && authToken)
+      nextRocketChat.authToken = authToken;
+    if (!rocketchatUserIdEnv && userId) nextRocketChat.userId = userId;
+    if (botUsername) nextRocketChat.botUsername = botUsername;
+    if (Object.keys(webhook).length > 0) nextRocketChat.webhook = webhook;
+
+    next = {
+      ...next,
+      rocketchat: nextRocketChat,
+    };
+  }
+
   if (selection.includes("signal")) {
     let resolvedCliPath = signalCliPath;
     let cliDetected = signalCliDetected;
@@ -1084,6 +1244,7 @@ export async function setupProviders(
 
     await prompter.note(
       [
+        "This is still a work in progress.",
         "Ensure Clawdbot has Full Disk Access to Messages DB.",
         "Grant Automation permission for Messages when prompted.",
         "List chats with: imsg chats --limit 20",
@@ -1131,6 +1292,19 @@ export async function setupProviders(
         next = {
           ...next,
           slack: { ...next.slack, enabled: false },
+        };
+      }
+    }
+
+    if (!selection.includes("rocketchat") && rocketchatConfigured) {
+      const disable = await prompter.confirm({
+        message: "Disable Rocket.Chat provider?",
+        initialValue: false,
+      });
+      if (disable) {
+        next = {
+          ...next,
+          rocketchat: { ...next.rocketchat, enabled: false },
         };
       }
     }

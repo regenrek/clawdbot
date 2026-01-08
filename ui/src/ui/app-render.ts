@@ -27,6 +27,7 @@ import type {
   CronFormState,
   DiscordForm,
   IMessageForm,
+  RocketChatForm,
   SlackForm,
   SignalForm,
   TelegramForm,
@@ -45,6 +46,7 @@ import {
   loadProviders,
   updateDiscordForm,
   updateIMessageForm,
+  updateRocketChatForm,
   updateSlackForm,
   updateSignalForm,
   updateTelegramForm,
@@ -124,6 +126,12 @@ export type AppViewState = {
   slackTokenLocked: boolean;
   slackAppTokenLocked: boolean;
   slackConfigStatus: string | null;
+  rocketchatForm: RocketChatForm;
+  rocketchatSaving: boolean;
+  rocketchatBaseUrlLocked: boolean;
+  rocketchatAuthLocked: boolean;
+  rocketchatUserIdLocked: boolean;
+  rocketchatConfigStatus: string | null;
   signalForm: SignalForm;
   signalSaving: boolean;
   signalConfigStatus: string | null;
@@ -275,6 +283,12 @@ export function renderApp(state: AppViewState) {
               slackAppTokenLocked: state.slackAppTokenLocked,
               slackSaving: state.slackSaving,
               slackStatus: state.slackConfigStatus,
+              rocketchatForm: state.rocketchatForm,
+              rocketchatBaseUrlLocked: state.rocketchatBaseUrlLocked,
+              rocketchatAuthLocked: state.rocketchatAuthLocked,
+              rocketchatUserIdLocked: state.rocketchatUserIdLocked,
+              rocketchatSaving: state.rocketchatSaving,
+              rocketchatStatus: state.rocketchatConfigStatus,
               signalForm: state.signalForm,
               signalSaving: state.signalSaving,
               signalStatus: state.signalConfigStatus,
@@ -291,6 +305,8 @@ export function renderApp(state: AppViewState) {
               onDiscordSave: () => state.handleDiscordSave(),
               onSlackChange: (patch) => updateSlackForm(state, patch),
               onSlackSave: () => state.handleSlackSave(),
+              onRocketChatChange: (patch) => updateRocketChatForm(state, patch),
+              onRocketChatSave: () => state.handleRocketChatSave(),
               onSignalChange: (patch) => updateSignalForm(state, patch),
               onSignalSave: () => state.handleSignalSave(),
               onIMessageChange: (patch) => updateIMessageForm(state, patch),

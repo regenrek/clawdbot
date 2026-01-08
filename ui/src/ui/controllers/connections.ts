@@ -9,6 +9,7 @@ import {
   type DiscordGuildChannelForm,
   type DiscordGuildForm,
   type IMessageForm,
+  type RocketChatForm,
   type SlackActionForm,
   type SlackForm,
   type SignalForm,
@@ -39,6 +40,12 @@ export type ConnectionsState = {
   slackTokenLocked: boolean;
   slackAppTokenLocked: boolean;
   slackConfigStatus: string | null;
+  rocketchatForm: RocketChatForm;
+  rocketchatSaving: boolean;
+  rocketchatBaseUrlLocked: boolean;
+  rocketchatAuthLocked: boolean;
+  rocketchatUserIdLocked: boolean;
+  rocketchatConfigStatus: string | null;
   signalForm: SignalForm;
   signalSaving: boolean;
   signalConfigStatus: string | null;
@@ -64,6 +71,9 @@ export async function loadProviders(state: ConnectionsState, probe: boolean) {
     state.discordTokenLocked = res.discord?.tokenSource === "env";
     state.slackTokenLocked = res.slack?.botTokenSource === "env";
     state.slackAppTokenLocked = res.slack?.appTokenSource === "env";
+    state.rocketchatBaseUrlLocked = res.rocketchat?.baseUrlSource === "env";
+    state.rocketchatAuthLocked = res.rocketchat?.authTokenSource === "env";
+    state.rocketchatUserIdLocked = res.rocketchat?.userIdSource === "env";
   } catch (err) {
     state.providersError = String(err);
   } finally {
@@ -159,6 +169,13 @@ export function updateSlackForm(
     return;
   }
   state.slackForm = { ...state.slackForm, ...patch };
+}
+
+export function updateRocketChatForm(
+  state: ConnectionsState,
+  patch: Partial<RocketChatForm>,
+) {
+  state.rocketchatForm = { ...state.rocketchatForm, ...patch };
 }
 
 export function updateSignalForm(
@@ -539,6 +556,163 @@ export async function saveSlackConfig(state: ConnectionsState) {
     state.slackConfigStatus = String(err);
   } finally {
     state.slackSaving = false;
+  }
+}
+
+export async function saveRocketChatConfig(state: ConnectionsState) {
+  if (!state.client || !state.connected) return;
+  if (state.rocketchatSaving) return;
+  state.rocketchatSaving = true;
+  state.rocketchatConfigStatus = null;
+  try {
+    const base = state.configSnapshot?.config ?? {};
+    const config = { ...base } as Record<string, unknown>;
+    const rocketchat = { ...(config.rocketchat ?? {}) } as Record<
+      string,
+      unknown
+    >;
+    const form = state.rocketchatForm;
+
+    if (form.enabled) {
+      delete rocketchat.enabled;
+    } else {
+      rocketchat.enabled = false;
+    }
+
+    if (!state.rocketchatBaseUrlLocked) {
+      const baseUrl = form.baseUrl.trim();
+      if (baseUrl) rocketchat.baseUrl = baseUrl;
+      else delete rocketchat.baseUrl;
+    }
+    if (!state.rocketchatAuthLocked) {
+      const authToken = form.authToken.trim();
+      if (authToken) rocketchat.authToken = authToken;
+      else delete rocketchat.authToken;
+    }
+    if (!state.rocketchatUserIdLocked) {
+      const userId = form.userId.trim();
+      if (userId) rocketchat.userId = userId;
+      else delete rocketchat.userId;
+    }
+
+    const botUsername = form.botUsername.trim();
+    if (botUsername) rocketchat.botUsername = botUsername;
+    else delete rocketchat.botUsername;
+
+    const alias = form.alias.trim();
+    if (alias) rocketchat.alias = alias;
+    else delete rocketchat.alias;
+
+    const avatarUrl = form.avatarUrl.trim();
+    if (avatarUrl) rocketchat.avatarUrl = avatarUrl;
+    else delete rocketchat.avatarUrl;
+
+    const emoji = form.emoji.trim();
+    if (emoji) rocketchat.emoji = emoji;
+    else delete rocketchat.emoji;
+
+    if (form.dmPolicy === "pairing") {
+      delete rocketchat.dmPolicy;
+    } else {
+      rocketchat.dmPolicy = form.dmPolicy;
+    }
+
+    const allowFrom = parseList(form.allowFrom);
+    if (allowFrom.length > 0) rocketchat.allowFrom = allowFrom;
+    else delete rocketchat.allowFrom;
+
+    if (form.groupPolicy === "open") {
+      delete rocketchat.groupPolicy;
+    } else {
+      rocketchat.groupPolicy = form.groupPolicy;
+    }
+    if (form.requireMention) {
+      delete rocketchat.requireMention;
+    } else {
+      rocketchat.requireMention = false;
+    }
+
+    const roomsList = parseList(form.rooms);
+    const existingRooms =
+      rocketchat.rooms && typeof rocketchat.rooms === "object"
+        ? (rocketchat.rooms as Record<string, unknown>)
+        : {};
+    const rooms: Record<string, unknown> = {};
+    roomsList.forEach((key) => {
+      const trimmed = String(key ?? "").trim();
+      if (!trimmed) return;
+      const existing = existingRooms[trimmed];
+      if (existing && typeof existing === "object") {
+        rooms[trimmed] = existing;
+      } else {
+        rooms[trimmed] = { allow: true };
+      }
+    });
+    if (Object.keys(rooms).length > 0) rocketchat.rooms = rooms;
+    else delete rocketchat.rooms;
+
+    const chunkLimitRaw = form.textChunkLimit.trim();
+    if (chunkLimitRaw.length === 0) {
+      delete rocketchat.textChunkLimit;
+    } else {
+      const chunkLimit = Number(chunkLimitRaw);
+      if (Number.isFinite(chunkLimit) && chunkLimit > 0) {
+        rocketchat.textChunkLimit = chunkLimit;
+      } else {
+        delete rocketchat.textChunkLimit;
+      }
+    }
+
+    const mediaMaxMb = Number(form.mediaMaxMb);
+    if (Number.isFinite(mediaMaxMb) && mediaMaxMb > 0) {
+      rocketchat.mediaMaxMb = mediaMaxMb;
+    } else {
+      delete rocketchat.mediaMaxMb;
+    }
+
+    const webhook =
+      rocketchat.webhook && typeof rocketchat.webhook === "object"
+        ? { ...(rocketchat.webhook as Record<string, unknown>) }
+        : {};
+    const webhookToken = form.webhookToken.trim();
+    if (webhookToken) webhook.token = webhookToken;
+    else delete webhook.token;
+    const webhookHost = form.webhookHost.trim();
+    if (webhookHost) webhook.host = webhookHost;
+    else delete webhook.host;
+    const webhookPath = form.webhookPath.trim();
+    if (webhookPath) webhook.path = webhookPath;
+    else delete webhook.path;
+    const webhookPortRaw = form.webhookPort.trim();
+    if (webhookPortRaw.length === 0) {
+      delete webhook.port;
+    } else {
+      const webhookPort = Number(webhookPortRaw);
+      if (Number.isFinite(webhookPort) && webhookPort > 0) {
+        webhook.port = webhookPort;
+      } else {
+        delete webhook.port;
+      }
+    }
+    if (Object.keys(webhook).length > 0) {
+      rocketchat.webhook = webhook;
+    } else {
+      delete rocketchat.webhook;
+    }
+
+    if (Object.keys(rocketchat).length > 0) {
+      config.rocketchat = rocketchat;
+    } else {
+      delete config.rocketchat;
+    }
+
+    const raw = `${JSON.stringify(config, null, 2).trimEnd()}\n`;
+    await state.client.request("config.set", { raw });
+    state.rocketchatConfigStatus = "Saved. Restart gateway if needed.";
+  } catch (err) {
+    state.rocketchatConfigStatus = String(err);
+  } finally {
+    state.rocketchatSaving = false;
   }
 }
 

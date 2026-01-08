@@ -100,6 +100,7 @@ function resolveDeliveryTarget(
       | "telegram"
       | "discord"
       | "slack"
+      | "rocketchat"
       | "signal"
       | "imessage";
     to?: string;
@@ -130,6 +131,7 @@ function resolveDeliveryTarget(
       requestedProvider === "telegram" ||
       requestedProvider === "discord" ||
       requestedProvider === "slack" ||
+      requestedProvider === "rocketchat" ||
       requestedProvider === "signal" ||
       requestedProvider === "imessage"
     ) {
@@ -547,6 +549,49 @@ export async function runCronIsolatedAgentTurn(params: {
               const caption = first ? (payload.text ?? "") : "";
               first = false;
               await params.deps.sendMessageSlack(slackTarget, caption, {
+                mediaUrl: url,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        if (!bestEffortDeliver)
+          return { status: "error", summary, error: String(err) };
+        return { status: "ok", summary };
+      }
+    } else if (resolvedDelivery.provider === "rocketchat") {
+      if (!resolvedDelivery.to) {
+        if (!bestEffortDeliver)
+          return {
+            status: "error",
+            summary,
+            error:
+              "Cron delivery to Rocket.Chat requires --provider rocketchat and --to <room:ID|#channel|@user|roomId>",
+          };
+        return {
+          status: "skipped",
+          summary: "Delivery skipped (no Rocket.Chat destination).",
+        };
+      }
+      const rocketchatTarget = resolvedDelivery.to;
+      const textLimit = resolveTextChunkLimit(params.cfg, "rocketchat");
+      try {
+        for (const payload of payloads) {
+          const mediaList =
+            payload.mediaUrls ?? (payload.mediaUrl ? [payload.mediaUrl] : []);
+          if (mediaList.length === 0) {
+            for (const chunk of chunkMarkdownText(
+              payload.text ?? "",
+              textLimit,
+            )) {
+              await params.deps.sendMessageRocketChat(rocketchatTarget, chunk);
+            }
+          } else {
+            let first = true;
+            for (const url of mediaList) {
+              const caption = first ? (payload.text ?? "") : "";
+              first = false;
+              await params.deps.sendMessageRocketChat(rocketchatTarget, caption, {
                 mediaUrl: url,
               });
             }

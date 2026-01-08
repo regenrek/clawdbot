@@ -10,6 +10,7 @@
 import type { ClawdbotConfig } from "../../config/config.js";
 import { sendMessageDiscord } from "../../discord/send.js";
 import { sendMessageIMessage } from "../../imessage/send.js";
+import { sendMessageRocketChat } from "../../rocketchat/send.js";
 import { sendMessageSignal } from "../../signal/send.js";
 import { sendMessageSlack } from "../../slack/send.js";
 import { sendMessageTelegram } from "../../telegram/send.js";
@@ -27,7 +28,7 @@ export type RouteReplyParams = {
   /** Provider account id (multi-account). */
   accountId?: string;
   /** Telegram message thread id (forum topics). */
-  threadId?: number;
+  threadId?: number | string;
   /** Config for provider-specific settings. */
   cfg: ClawdbotConfig;
 };
@@ -53,6 +54,7 @@ export async function routeReply(
   params: RouteReplyParams,
 ): Promise<RouteReplyResult> {
   const { payload, channel, to, accountId, threadId } = params;
+  const telegramThreadId = typeof threadId === "number" ? threadId : undefined;
 
   // Debug: `pnpm test src/auto-reply/reply/route-reply.test.ts`
   const text = payload.text ?? "";
@@ -77,7 +79,7 @@ export async function routeReply(
       case "telegram": {
         const result = await sendMessageTelegram(to, text, {
           mediaUrl,
-          messageThreadId: threadId,
+          messageThreadId: telegramThreadId,
         });
         return { ok: true, messageId: result.messageId };
       }
@@ -86,6 +88,20 @@ export async function routeReply(
         const result = await sendMessageSlack(to, text, {
           mediaUrl,
           threadTs: replyToId,
+        });
+        return { ok: true, messageId: result.messageId };
+      }
+
+      case "rocketchat": {
+        const thread =
+          typeof threadId === "string"
+            ? threadId
+            : typeof replyToId === "string"
+              ? replyToId
+              : undefined;
+        const result = await sendMessageRocketChat(to, text, {
+          mediaUrl,
+          threadId: thread,
         });
         return { ok: true, messageId: result.messageId };
       }
@@ -174,6 +190,7 @@ export function isRoutableChannel(
     "telegram",
     "slack",
     "discord",
+    "rocketchat",
     "signal",
     "imessage",
     "whatsapp",

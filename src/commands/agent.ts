@@ -529,6 +529,7 @@ export async function agentCommand(
     deliveryProvider === "telegram" ||
     deliveryProvider === "discord" ||
     deliveryProvider === "slack" ||
+    deliveryProvider === "rocketchat" ||
     deliveryProvider === "signal" ||
     deliveryProvider === "imessage" ||
     deliveryProvider === "webchat";
@@ -605,14 +606,15 @@ export async function agentCommand(
         bestEffort: bestEffortDeliver,
         onError: (err) => logDeliveryError(err),
         onPayload: logPayload,
-        deps: {
-          sendWhatsApp: deps.sendMessageWhatsApp,
-          sendTelegram: deps.sendMessageTelegram,
-          sendDiscord: deps.sendMessageDiscord,
-          sendSlack: deps.sendMessageSlack,
-          sendSignal: deps.sendMessageSignal,
-          sendIMessage: deps.sendMessageIMessage,
-        },
+          deps: {
+            sendWhatsApp: deps.sendMessageWhatsApp,
+            sendTelegram: deps.sendMessageTelegram,
+            sendDiscord: deps.sendMessageDiscord,
+            sendSlack: deps.sendMessageSlack,
+            sendRocketChat: deps.sendMessageRocketChat,
+            sendSignal: deps.sendMessageSignal,
+            sendIMessage: deps.sendMessageIMessage,
+          },
       });
     }
   }

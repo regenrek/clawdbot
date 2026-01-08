@@ -61,6 +61,13 @@ const hoisted = vi.hoisted(() => {
         lastStopAt: null,
         lastError: null,
       },
+      rocketchat: {
+        running: false,
+        lastStartAt: null,
+        lastStopAt: null,
+        lastError: null,
+        baseUrl: null,
+      },
       signal: {
         running: false,
         lastStartAt: null,
@@ -86,6 +93,8 @@ const hoisted = vi.hoisted(() => {
     stopDiscordProvider: vi.fn(async () => {}),
     startSlackProvider: vi.fn(async () => {}),
     stopSlackProvider: vi.fn(async () => {}),
+    startRocketChatProvider: vi.fn(async () => {}),
+    stopRocketChatProvider: vi.fn(async () => {}),
     startSignalProvider: vi.fn(async () => {}),
     stopSignalProvider: vi.fn(async () => {}),
     startIMessageProvider: vi.fn(async () => {}),
@@ -201,6 +210,12 @@ describe("gateway hot reload", () => {
       web: { enabled: true },
       telegram: { botToken: "token" },
       discord: { token: "token" },
+      rocketchat: {
+        baseUrl: "https://chat.example.com",
+        authToken: "token",
+        userId: "user",
+        webhook: { token: "hook" },
+      },
       signal: { account: "+15550000000" },
       imessage: { enabled: true },
     };
@@ -215,6 +230,7 @@ describe("gateway hot reload", () => {
           "web.enabled",
           "telegram.botToken",
           "discord.token",
+          "rocketchat.baseUrl",
           "signal.account",
           "imessage.enabled",
         ],
@@ -230,6 +246,7 @@ describe("gateway hot reload", () => {
           "whatsapp",
           "telegram",
           "discord",
+          "rocketchat",
           "signal",
           "imessage",
         ]),
@@ -269,6 +286,12 @@ describe("gateway hot reload", () => {
     expect(hoisted.providerManager.startDiscordProvider).toHaveBeenCalledTimes(
       1,
     );
+    expect(
+      hoisted.providerManager.stopRocketChatProvider,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      hoisted.providerManager.startRocketChatProvider,
+    ).toHaveBeenCalledTimes(1);
     expect(hoisted.providerManager.stopSignalProvider).toHaveBeenCalledTimes(1);
     expect(hoisted.providerManager.startSignalProvider).toHaveBeenCalledTimes(
       1,

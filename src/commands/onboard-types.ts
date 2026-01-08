@@ -20,6 +20,7 @@ export type ProviderChoice =
   | "telegram"
   | "discord"
   | "slack"
+  | "rocketchat"
   | "signal"
   | "imessage";
 

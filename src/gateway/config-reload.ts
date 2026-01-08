@@ -16,6 +16,7 @@ export type ProviderKind =
   | "telegram"
   | "discord"
   | "slack"
+  | "rocketchat"
   | "signal"
   | "imessage";
 
@@ -49,6 +50,7 @@ type ReloadAction =
   | "restart-provider:telegram"
   | "restart-provider:discord"
   | "restart-provider:slack"
+  | "restart-provider:rocketchat"
   | "restart-provider:signal"
   | "restart-provider:imessage";
 
@@ -73,6 +75,11 @@ const RELOAD_RULES: ReloadRule[] = [
   { prefix: "telegram", kind: "hot", actions: ["restart-provider:telegram"] },
   { prefix: "discord", kind: "hot", actions: ["restart-provider:discord"] },
   { prefix: "slack", kind: "hot", actions: ["restart-provider:slack"] },
+  {
+    prefix: "rocketchat",
+    kind: "hot",
+    actions: ["restart-provider:rocketchat"],
+  },
   { prefix: "signal", kind: "hot", actions: ["restart-provider:signal"] },
   { prefix: "imessage", kind: "hot", actions: ["restart-provider:imessage"] },
   { prefix: "identity", kind: "none" },
@@ -205,6 +212,9 @@ export function buildGatewayReloadPlan(
         break;
       case "restart-provider:slack":
         plan.restartProviders.add("slack");
+        break;
+      case "restart-provider:rocketchat":
+        plan.restartProviders.add("rocketchat");
         break;
       case "restart-provider:signal":
         plan.restartProviders.add("signal");

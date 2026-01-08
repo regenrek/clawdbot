@@ -1,6 +1,7 @@
 import { loadConfig } from "../config/config.js";
 import { loadSessionStore, resolveStorePath } from "../config/sessions.js";
 import { type DiscordProbe, probeDiscord } from "../discord/probe.js";
+import { type RocketChatProbe, probeRocketChat } from "../rocketchat/probe.js";
 import { callGateway } from "../gateway/call.js";
 import { info } from "../globals.js";
 import type { RuntimeEnv } from "../runtime.js";
@@ -40,6 +41,10 @@ export type HealthSummary = {
   discord: {
     configured: boolean;
     probe?: DiscordProbe;
+  };
+  rocketchat: {
+    configured: boolean;
+    probe?: RocketChatProbe;
   };
   heartbeatSeconds: number;
   sessions: {
@@ -91,6 +96,38 @@ export async function getHealthSnapshot(
     ? await probeDiscord(discordToken.trim(), cappedTimeout)
     : undefined;
 
+  const rocketchatEnabled = cfg.rocketchat?.enabled !== false;
+  const rocketchatBaseUrl =
+    process.env.ROCKETCHAT_BASE_URL?.trim() ||
+    cfg.rocketchat?.baseUrl?.trim() ||
+    "";
+  const rocketchatAuthToken =
+    process.env.ROCKETCHAT_AUTH_TOKEN?.trim() ||
+    cfg.rocketchat?.authToken?.trim() ||
+    "";
+  const rocketchatUserId =
+    process.env.ROCKETCHAT_USER_ID?.trim() ||
+    cfg.rocketchat?.userId?.trim() ||
+    "";
+  const rocketchatWebhookToken = cfg.rocketchat?.webhook?.token?.trim() || "";
+  const rocketchatConfigured =
+    rocketchatEnabled &&
+    Boolean(
+      rocketchatBaseUrl &&
+        rocketchatAuthToken &&
+        rocketchatUserId &&
+        rocketchatWebhookToken,
+    );
+  const rocketchatProbe = rocketchatConfigured
+    ? await probeRocketChat(
+        rocketchatBaseUrl,
+        rocketchatAuthToken,
+        rocketchatUserId,
+        cappedTimeout,
+        cfg.rocketchat?.retry,
+      )
+    : undefined;
+
   const summary: HealthSummary = {
     ok: true,
     ts: Date.now(),
@@ -98,6 +135,7 @@ export async function getHealthSnapshot(
     web: { linked, authAgeMs },
     telegram: { configured: telegramConfigured, probe: telegramProbe },
     discord: { configured: discordConfigured, probe: discordProbe },
+    rocketchat: { configured: rocketchatConfigured, probe: rocketchatProbe },
     heartbeatSeconds,
     sessions: {
       path: storePath,

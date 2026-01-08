@@ -14,6 +14,7 @@ export type TextChunkProvider =
   | "telegram"
   | "discord"
   | "slack"
+  | "rocketchat"
   | "signal"
   | "imessage"
   | "webchat";
@@ -23,6 +24,7 @@ const DEFAULT_CHUNK_LIMIT_BY_PROVIDER: Record<TextChunkProvider, number> = {
   telegram: 4000,
   discord: 2000,
   slack: 4000,
+  rocketchat: 4000,
   signal: 4000,
   imessage: 4000,
   webchat: 4000,
@@ -38,6 +40,7 @@ export function resolveTextChunkLimit(
     if (provider === "telegram") return cfg?.telegram?.textChunkLimit;
     if (provider === "discord") return cfg?.discord?.textChunkLimit;
     if (provider === "slack") return cfg?.slack?.textChunkLimit;
+    if (provider === "rocketchat") return cfg?.rocketchat?.textChunkLimit;
     if (provider === "signal") return cfg?.signal?.textChunkLimit;
     if (provider === "imessage") return cfg?.imessage?.textChunkLimit;
     return undefined;

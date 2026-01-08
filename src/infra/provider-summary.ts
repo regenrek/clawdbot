@@ -59,6 +59,60 @@ export async function buildProviderSummary(
     );
   }
 
+  const discordEnabled = effective.discord?.enabled !== false;
+  if (!discordEnabled) {
+    lines.push(tint("Discord: disabled", chalk.cyan));
+  } else {
+    const discordToken =
+      process.env.DISCORD_BOT_TOKEN?.trim() || effective.discord?.token?.trim();
+    const discordConfigured = Boolean(discordToken);
+    lines.push(
+      discordConfigured
+        ? tint("Discord: configured", chalk.green)
+        : tint("Discord: not configured", chalk.cyan),
+    );
+  }
+
+  const slackEnabled = effective.slack?.enabled !== false;
+  if (!slackEnabled) {
+    lines.push(tint("Slack: disabled", chalk.cyan));
+  } else {
+    const botToken =
+      process.env.SLACK_BOT_TOKEN?.trim() || effective.slack?.botToken?.trim();
+    const appToken =
+      process.env.SLACK_APP_TOKEN?.trim() || effective.slack?.appToken?.trim();
+    const slackConfigured = Boolean(botToken && appToken);
+    lines.push(
+      slackConfigured
+        ? tint("Slack: configured", chalk.green)
+        : tint("Slack: not configured", chalk.cyan),
+    );
+  }
+
+  const rocketchatEnabled = effective.rocketchat?.enabled !== false;
+  if (!rocketchatEnabled) {
+    lines.push(tint("Rocket.Chat: disabled", chalk.cyan));
+  } else {
+    const baseUrl =
+      process.env.ROCKETCHAT_BASE_URL?.trim() ||
+      effective.rocketchat?.baseUrl?.trim();
+    const authToken =
+      process.env.ROCKETCHAT_AUTH_TOKEN?.trim() ||
+      effective.rocketchat?.authToken?.trim();
+    const userId =
+      process.env.ROCKETCHAT_USER_ID?.trim() ||
+      effective.rocketchat?.userId?.trim();
+    const webhookToken = effective.rocketchat?.webhook?.token?.trim();
+    const rocketchatConfigured = Boolean(
+      baseUrl && authToken && userId && webhookToken,
+    );
+    lines.push(
+      rocketchatConfigured
+        ? tint("Rocket.Chat: configured", chalk.green)
+        : tint("Rocket.Chat: not configured", chalk.cyan),
+    );
+  }
+
   const signalEnabled = effective.signal?.enabled !== false;
   if (!signalEnabled) {
     lines.push(tint("Signal: disabled", chalk.cyan));

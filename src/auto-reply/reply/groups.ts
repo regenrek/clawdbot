@@ -26,6 +26,14 @@ function normalizeSlackSlug(raw?: string | null) {
   return cleaned.replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "");
 }
 
+function normalizeRocketChatSlug(raw?: string | null) {
+  const trimmed = raw?.trim().toLowerCase() ?? "";
+  if (!trimmed) return "";
+  const dashed = trimmed.replace(/\s+/g, "-");
+  const cleaned = dashed.replace(/[^a-z0-9#@._+-]+/g, "-");
+  return cleaned.replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+}
+
 function parseTelegramGroupId(value?: string | null) {
   const raw = value?.trim() ?? "";
   if (!raw) return { chatId: undefined, topicId: undefined };
@@ -174,6 +182,40 @@ export function resolveGroupRequireMention(params: {
     }
     return true;
   }
+  if (provider === "rocketchat") {
+    const rooms = cfg.rocketchat?.rooms ?? {};
+    const keys = Object.keys(rooms);
+    if (keys.length === 0) {
+      return typeof cfg.rocketchat?.requireMention === "boolean"
+        ? cfg.rocketchat.requireMention
+        : true;
+    }
+    const roomId = groupId?.trim();
+    const roomName = groupRoom?.replace(/^#/, "");
+    const normalizedName = normalizeRocketChatSlug(roomName);
+    const candidates = [
+      roomId ?? "",
+      roomName ? `#${roomName}` : "",
+      roomName ?? "",
+      normalizedName,
+    ].filter(Boolean);
+    let matched: { requireMention?: boolean } | undefined;
+    for (const candidate of candidates) {
+      if (candidate && rooms[candidate]) {
+        matched = rooms[candidate];
+        break;
+      }
+    }
+    const fallback = rooms["*"];
+    const resolved = matched ?? fallback;
+    if (typeof resolved?.requireMention === "boolean") {
+      return resolved.requireMention;
+    }
+    if (typeof cfg.rocketchat?.requireMention === "boolean") {
+      return cfg.rocketchat.requireMention;
+    }
+    return true;
+  }
   return true;
 }
 
@@ -200,6 +242,7 @@ export function buildGroupIntro(params: {
     if (provider === "whatsapp") return "WhatsApp";
     if (provider === "telegram") return "Telegram";
     if (provider === "discord") return "Discord";
+    if (provider === "rocketchat") return "Rocket.Chat";
     if (provider === "webchat") return "WebChat";
     return `${provider.at(0)?.toUpperCase() ?? ""}${provider.slice(1)}`;
   })();

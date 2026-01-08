@@ -40,6 +40,7 @@ export async function sendCommand(
     provider === "telegram" ||
     provider === "discord" ||
     provider === "slack" ||
+    provider === "rocketchat" ||
     provider === "signal" ||
     provider === "imessage"
   ) {
@@ -60,6 +61,7 @@ export async function sendCommand(
         sendTelegram: deps.sendMessageTelegram,
         sendDiscord: deps.sendMessageDiscord,
         sendSlack: deps.sendMessageSlack,
+        sendRocketChat: deps.sendMessageRocketChat,
         sendSignal: deps.sendMessageSignal,
         sendIMessage: deps.sendMessageIMessage,
       },

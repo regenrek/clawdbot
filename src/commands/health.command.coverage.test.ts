@@ -49,6 +49,9 @@ describe("healthCommand (coverage)", () => {
       discord: {
         configured: false,
       },
+      rocketchat: {
+        configured: false,
+      },
       heartbeatSeconds: 60,
       sessions: {
         path: "/tmp/sessions.json",

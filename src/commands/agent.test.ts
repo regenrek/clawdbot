@@ -276,6 +276,7 @@ describe("agentCommand", () => {
           .fn()
           .mockResolvedValue({ messageId: "t1", chatId: "123" }),
         sendMessageDiscord: vi.fn(),
+        sendMessageRocketChat: vi.fn(),
         sendMessageSignal: vi.fn(),
         sendMessageIMessage: vi.fn(),
       };

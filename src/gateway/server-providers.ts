@@ -5,6 +5,7 @@ import { shouldLogVerbose } from "../globals.js";
 import { monitorIMessageProvider } from "../imessage/index.js";
 import type { createSubsystemLogger } from "../logging.js";
 import { monitorWebProvider, webAuthExists } from "../providers/web/index.js";
+import { monitorRocketChatProvider } from "../rocketchat/monitor.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { monitorSignalProvider } from "../signal/index.js";
 import {
@@ -45,6 +46,14 @@ export type SlackRuntimeStatus = {
   lastError?: string | null;
 };
 
+export type RocketChatRuntimeStatus = {
+  running: boolean;
+  lastStartAt?: number | null;
+  lastStopAt?: number | null;
+  lastError?: string | null;
+  baseUrl?: string | null;
+};
+
 export type SignalRuntimeStatus = {
   running: boolean;
   lastStartAt?: number | null;
@@ -68,6 +77,7 @@ export type ProviderRuntimeSnapshot = {
   telegram: TelegramRuntimeStatus;
   discord: DiscordRuntimeStatus;
   slack: SlackRuntimeStatus;
+  rocketchat: RocketChatRuntimeStatus;
   signal: SignalRuntimeStatus;
   imessage: IMessageRuntimeStatus;
 };
@@ -80,12 +90,14 @@ type ProviderManagerOptions = {
   logTelegram: SubsystemLogger;
   logDiscord: SubsystemLogger;
   logSlack: SubsystemLogger;
+  logRocketChat: SubsystemLogger;
   logSignal: SubsystemLogger;
   logIMessage: SubsystemLogger;
   whatsappRuntimeEnv: RuntimeEnv;
   telegramRuntimeEnv: RuntimeEnv;
   discordRuntimeEnv: RuntimeEnv;
   slackRuntimeEnv: RuntimeEnv;
+  rocketchatRuntimeEnv: RuntimeEnv;
   signalRuntimeEnv: RuntimeEnv;
   imessageRuntimeEnv: RuntimeEnv;
 };
@@ -101,6 +113,8 @@ export type ProviderManager = {
   stopDiscordProvider: () => Promise<void>;
   startSlackProvider: () => Promise<void>;
   stopSlackProvider: () => Promise<void>;
+  startRocketChatProvider: () => Promise<void>;
+  stopRocketChatProvider: () => Promise<void>;
   startSignalProvider: () => Promise<void>;
   stopSignalProvider: () => Promise<void>;
   startIMessageProvider: () => Promise<void>;
@@ -117,12 +131,14 @@ export function createProviderManager(
     logTelegram,
     logDiscord,
     logSlack,
+    logRocketChat,
     logSignal,
     logIMessage,
     whatsappRuntimeEnv,
     telegramRuntimeEnv,
     discordRuntimeEnv,
     slackRuntimeEnv,
+    rocketchatRuntimeEnv,
     signalRuntimeEnv,
     imessageRuntimeEnv,
   } = opts;
@@ -131,12 +147,14 @@ export function createProviderManager(
   let telegramAbort: AbortController | null = null;
   let discordAbort: AbortController | null = null;
   let slackAbort: AbortController | null = null;
+  let rocketchatAbort: AbortController | null = null;
   let signalAbort: AbortController | null = null;
   let imessageAbort: AbortController | null = null;
   const whatsappTasks = new Map<string, Promise<unknown>>();
   let telegramTask: Promise<unknown> | null = null;
   let discordTask: Promise<unknown> | null = null;
   let slackTask: Promise<unknown> | null = null;
+  let rocketchatTask: Promise<unknown> | null = null;
   let signalTask: Promise<unknown> | null = null;
   let imessageTask: Promise<unknown> | null = null;
 
@@ -169,6 +187,13 @@ export function createProviderManager(
     lastStartAt: null,
     lastStopAt: null,
     lastError: null,
+  };
+  let rocketchatRuntime: RocketChatRuntimeStatus = {
+    running: false,
+    lastStartAt: null,
+    lastStopAt: null,
+    lastError: null,
+    baseUrl: null,
   };
   let signalRuntime: SignalRuntimeStatus = {
     running: false,
@@ -599,6 +624,109 @@ export function createProviderManager(
     };
   };
 
+  const startRocketChatProvider = async () => {
+    if (rocketchatTask) return;
+    const cfg = loadConfig();
+    if (!cfg.rocketchat) {
+      rocketchatRuntime = {
+        ...rocketchatRuntime,
+        running: false,
+        lastError: "not configured",
+      };
+      if (shouldLogVerbose()) {
+        logRocketChat.debug("rocketchat provider not configured (no config)");
+      }
+      return;
+    }
+    if (cfg.rocketchat.enabled === false) {
+      rocketchatRuntime = {
+        ...rocketchatRuntime,
+        running: false,
+        lastError: "disabled",
+      };
+      if (shouldLogVerbose()) {
+        logRocketChat.debug(
+          "rocketchat provider disabled (rocketchat.enabled=false)",
+        );
+      }
+      return;
+    }
+    const baseUrl =
+      process.env.ROCKETCHAT_BASE_URL?.trim() ||
+      cfg.rocketchat.baseUrl?.trim() ||
+      "";
+    const authToken =
+      process.env.ROCKETCHAT_AUTH_TOKEN?.trim() ||
+      cfg.rocketchat.authToken?.trim() ||
+      "";
+    const userId =
+      process.env.ROCKETCHAT_USER_ID?.trim() ||
+      cfg.rocketchat.userId?.trim() ||
+      "";
+    const webhookToken = cfg.rocketchat.webhook?.token?.trim() || "";
+    if (!baseUrl || !authToken || !userId || !webhookToken) {
+      rocketchatRuntime = {
+        ...rocketchatRuntime,
+        running: false,
+        lastError: "not configured",
+        baseUrl: baseUrl || null,
+      };
+      if (shouldLogVerbose()) {
+        logRocketChat.debug(
+          "rocketchat provider not configured (missing baseUrl/authToken/userId/webhook.token)",
+        );
+      }
+      return;
+    }
+    logRocketChat.info("starting provider");
+    rocketchatAbort = new AbortController();
+    rocketchatRuntime = {
+      ...rocketchatRuntime,
+      running: true,
+      lastStartAt: Date.now(),
+      lastError: null,
+      baseUrl,
+    };
+    const task = monitorRocketChatProvider({
+      runtime: rocketchatRuntimeEnv,
+      abortSignal: rocketchatAbort.signal,
+    })
+      .catch((err) => {
+        rocketchatRuntime = {
+          ...rocketchatRuntime,
+          lastError: formatError(err),
+        };
+        logRocketChat.error(`provider exited: ${formatError(err)}`);
+      })
+      .finally(() => {
+        rocketchatAbort = null;
+        rocketchatTask = null;
+        rocketchatRuntime = {
+          ...rocketchatRuntime,
+          running: false,
+          lastStopAt: Date.now(),
+        };
+      });
+    rocketchatTask = task;
+  };
+
+  const stopRocketChatProvider = async () => {
+    if (!rocketchatAbort && !rocketchatTask) return;
+    rocketchatAbort?.abort();
+    try {
+      await rocketchatTask;
+    } catch {
+      // ignore
+    }
+    rocketchatAbort = null;
+    rocketchatTask = null;
+    rocketchatRuntime = {
+      ...rocketchatRuntime,
+      running: false,
+      lastStopAt: Date.now(),
+    };
+  };
+
   const startSignalProvider = async () => {
     if (signalTask) return;
     const cfg = loadConfig();
@@ -802,6 +930,7 @@ export function createProviderManager(
     await startWhatsAppProvider();
     await startDiscordProvider();
     await startSlackProvider();
+    await startRocketChatProvider();
     await startTelegramProvider();
     await startSignalProvider();
     await startIMessageProvider();
@@ -835,6 +964,7 @@ export function createProviderManager(
       telegram: { ...telegramRuntime },
       discord: { ...discordRuntime },
       slack: { ...slackRuntime },
+      rocketchat: { ...rocketchatRuntime },
       signal: { ...signalRuntime },
       imessage: { ...imessageRuntime },
     };
@@ -851,6 +981,8 @@ export function createProviderManager(
     stopDiscordProvider,
     startSlackProvider,
     stopSlackProvider,
+    startRocketChatProvider,
+    stopRocketChatProvider,
     startSignalProvider,
     stopSignalProvider,
     startIMessageProvider,

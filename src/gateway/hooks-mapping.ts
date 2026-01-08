@@ -24,6 +24,7 @@ export type HookMappingResolved = {
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage";
   to?: string;
@@ -63,6 +64,7 @@ export type HookAction =
         | "telegram"
         | "discord"
         | "slack"
+        | "rocketchat"
         | "signal"
         | "imessage";
       to?: string;
@@ -107,6 +109,7 @@ type HookTransformResult = Partial<{
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage";
   to: string;

@@ -1,4 +1,5 @@
 export type ReplyMode = "text" | "command";
+export type TypingMode = "never" | "instant" | "thinking" | "message";
 export type SessionScope = "per-sender" | "global";
 export type ReplyToMode = "off" | "first" | "all";
 export type GroupPolicy = "open" | "disabled" | "allowlist";
@@ -37,6 +38,7 @@ export type SessionConfig = {
   heartbeatIdleMinutes?: number;
   store?: string;
   typingIntervalSeconds?: number;
+  typingMode?: TypingMode;
   mainKey?: string;
   sendPolicy?: SessionSendPolicyConfig;
   agentToAgent?: {
@@ -83,6 +85,7 @@ export type AgentElevatedAllowFromConfig = {
   telegram?: Array<string | number>;
   discord?: Array<string | number>;
   slack?: Array<string | number>;
+  rocketchat?: Array<string | number>;
   signal?: Array<string | number>;
   imessage?: Array<string | number>;
   webchat?: Array<string | number>;
@@ -208,6 +211,7 @@ export type HookMappingConfig = {
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage";
   to?: string;
@@ -485,6 +489,76 @@ export type SlackConfig = {
   channels?: Record<string, SlackChannelConfig>;
 };
 
+export type RocketChatRoomConfig = {
+  /** If false, disable the bot in this room. (Alias for allow: false.) */
+  enabled?: boolean;
+  /** Legacy room allow toggle; prefer enabled. */
+  allow?: boolean;
+  /** Require mentioning the bot to trigger replies. */
+  requireMention?: boolean;
+  /** Allowlist of users that can invoke the bot in this room. */
+  users?: Array<string | number>;
+  /** Optional skill filter for this room. */
+  skills?: string[];
+  /** Optional system prompt for this room. */
+  systemPrompt?: string;
+};
+
+export type RocketChatWebhookConfig = {
+  /** Bind host for the outgoing webhook listener (default: 0.0.0.0). */
+  host?: string;
+  /** Bind port for the outgoing webhook listener (default: 8790). */
+  port?: number;
+  /** Path for the outgoing webhook listener (default: /rocketchat/outgoing). */
+  path?: string;
+  /** Shared secret token for outgoing webhook validation. */
+  token?: string;
+  /** Max inbound payload bytes (default: 1 MiB). */
+  maxBodyBytes?: number;
+};
+
+export type RocketChatConfig = {
+  /** If false, do not start the Rocket.Chat provider. Default: true. */
+  enabled?: boolean;
+  /** Rocket.Chat base URL (https://chat.example.com). */
+  baseUrl?: string;
+  /** Rocket.Chat auth token (X-Auth-Token). */
+  authToken?: string;
+  /** Rocket.Chat user id (X-User-Id). */
+  userId?: string;
+  /** Bot username (used to ignore self + detect mentions). */
+  botUsername?: string;
+  /** Optional alias (requires message-impersonate permission). */
+  alias?: string;
+  /** Optional avatar URL (requires message-impersonate permission). */
+  avatarUrl?: string;
+  /** Optional avatar emoji (requires message-impersonate permission). */
+  emoji?: string;
+  /**
+   * Controls how room messages are handled:
+   * - "open" (default): rooms bypass allowlists; mention-gating applies
+   * - "disabled": block all room messages
+   * - "allowlist": only allow rooms present in rocketchat.rooms
+   */
+  groupPolicy?: GroupPolicy;
+  /** Require mention by default in rooms (default: true). */
+  requireMention?: boolean;
+  /** Outbound text chunk size (chars). Default: 4000. */
+  textChunkLimit?: number;
+  /** Max media size in MB for outbound uploads. */
+  mediaMaxMb?: number;
+  /** Retry policy for outbound Rocket.Chat API calls. */
+  retry?: OutboundRetryConfig;
+  /** Direct message access policy (default: pairing). */
+  dmPolicy?: DmPolicy;
+  /** Allowlist for DM senders (ids or usernames). */
+  allowFrom?: Array<string | number>;
+  /** Per-room config keyed by room id or name. */
+  rooms?: Record<string, RocketChatRoomConfig>;
+  /** Outgoing webhook listener config. */
+  webhook?: RocketChatWebhookConfig;
+};
+
 export type SignalConfig = {
   /** If false, do not start the Signal provider. Default: true. */
   enabled?: boolean;
@@ -574,6 +648,7 @@ export type QueueModeByProvider = {
   telegram?: QueueMode;
   discord?: QueueMode;
   slack?: QueueMode;
+  rocketchat?: QueueMode;
   signal?: QueueMode;
   imessage?: QueueMode;
   webchat?: QueueMode;
@@ -964,6 +1039,8 @@ export type ClawdbotConfig = {
     /** Max inbound media size in MB for agent-visible attachments (text note or future image attach). */
     mediaMaxMb?: number;
     typingIntervalSeconds?: number;
+    /** Typing indicator start mode (never|instant|thinking|message). */
+    typingMode?: TypingMode;
     /** Periodic background heartbeat runs. */
     heartbeat?: {
       /** Heartbeat interval (duration string, default unit: minutes; default: 30m). */
@@ -977,6 +1054,7 @@ export type ClawdbotConfig = {
         | "telegram"
         | "discord"
         | "slack"
+        | "rocketchat"
         | "signal"
         | "imessage"
         | "none";
@@ -1126,6 +1204,7 @@ export type ClawdbotConfig = {
   telegram?: TelegramConfig;
   discord?: DiscordConfig;
   slack?: SlackConfig;
+  rocketchat?: RocketChatConfig;
   signal?: SignalConfig;
   imessage?: IMessageConfig;
   cron?: CronConfig;
