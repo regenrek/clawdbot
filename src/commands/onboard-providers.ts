@@ -737,6 +737,8 @@ export async function setupProviders(
       "Discord — very well supported right now. Docs: https://docs.clawd.bot/discord",
     slack:
       "Slack — supported (Socket Mode). Docs: https://docs.clawd.bot/slack",
+    rocketchat:
+      "Rocket.Chat — outbound webhook + REST API token. Docs: https://docs.clawd.bot/providers/rocketchat",
     signal:
       "Signal — signal-cli linked device; more setup (if you want easy, hop on Discord). Docs: https://docs.clawd.bot/signal",
     imessage:

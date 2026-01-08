@@ -157,12 +157,13 @@ export async function sendMessageRocketChat(
     opts.mediaUrl,
     resolveMediaMaxBytes(cfg),
   );
+  const safeFileName = fileName?.trim() || "upload.bin";
   const [firstChunk, ...rest] = chunks;
   const caption = firstChunk ?? "";
   const upload = await uploadRocketChatRoomMedia(auth, {
     roomId,
     file: buffer,
-    fileName,
+    fileName: safeFileName,
     contentType,
     caption,
   });

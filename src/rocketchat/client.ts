@@ -366,7 +366,7 @@ export async function uploadRocketChatRoomMedia(
   if (timeout.unref) timeout.unref();
 
   const form = new FormData();
-  const blob = new Blob([params.file], {
+  const blob = new Blob([new Uint8Array(params.file)], {
     type: params.contentType ?? "application/octet-stream",
   });
   form.append("file", blob, params.fileName);

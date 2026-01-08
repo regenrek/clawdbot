@@ -175,15 +175,28 @@ export const DEFAULT_RESET_TRIGGER = "/new";
 export const DEFAULT_RESET_TRIGGERS = ["/new", "/reset"];
 export const DEFAULT_IDLE_MINUTES = 60;
 
+function normalizeTopicToken(raw: string): string {
+  const cleaned = raw.trim();
+  if (!cleaned) return "";
+  const safe = cleaned
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return safe || "thread";
+}
+
 export function resolveSessionTranscriptPath(
   sessionId: string,
   agentId?: string,
-  topicId?: number,
+  topicId?: number | string,
 ): string {
-  const fileName =
-    topicId !== undefined
-      ? `${sessionId}-topic-${topicId}.jsonl`
-      : `${sessionId}.jsonl`;
+  const topicToken =
+    topicId === undefined || topicId === null
+      ? ""
+      : normalizeTopicToken(String(topicId));
+  const fileName = topicToken
+    ? `${sessionId}-topic-${topicToken}.jsonl`
+    : `${sessionId}.jsonl`;
   return path.join(resolveAgentSessionsDir(agentId), fileName);
 }
 

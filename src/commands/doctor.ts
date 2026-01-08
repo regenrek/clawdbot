@@ -76,6 +76,7 @@ async function noteSecurityWarnings(cfg: ClawdbotConfig) {
     label: string;
     provider:
       | "telegram"
+      | "rocketchat"
       | "signal"
       | "imessage"
       | "discord"

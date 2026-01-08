@@ -54,6 +54,17 @@ export async function routeReply(
   params: RouteReplyParams,
 ): Promise<RouteReplyResult> {
   const { payload, channel, to, accountId, threadId } = params;
+  const telegramThreadIdRaw =
+    typeof threadId === "number"
+      ? threadId
+      : typeof threadId === "string"
+        ? Number(threadId)
+        : undefined;
+  const telegramThreadId =
+    typeof telegramThreadIdRaw === "number" &&
+    Number.isFinite(telegramThreadIdRaw)
+      ? telegramThreadIdRaw
+      : undefined;
 
   // Debug: `pnpm test src/auto-reply/reply/route-reply.test.ts`
   const text = payload.text ?? "";
@@ -78,7 +89,7 @@ export async function routeReply(
       case "telegram": {
         const result = await sendMessageTelegram(to, text, {
           mediaUrl,
-          messageThreadId: threadId,
+          messageThreadId: telegramThreadId,
         });
         return { ok: true, messageId: result.messageId };
       }

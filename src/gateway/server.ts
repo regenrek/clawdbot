@@ -497,6 +497,7 @@ export async function startGatewayServer(
       | "telegram"
       | "discord"
       | "slack"
+      | "rocketchat"
       | "signal"
       | "imessage";
     to?: string;
