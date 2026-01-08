@@ -508,6 +508,10 @@
     {
       "source": "/wizard",
       "destination": "/start/wizard"
+    },
+    {
+      "source": "/oauth",
+      "destination": "/concepts/oauth"
     }
   ],
   "navigation": {
@@ -543,6 +547,8 @@
           "concepts/architecture",
           "concepts/agent",
           "concepts/agent-loop",
+          "concepts/system-prompt",
+          "concepts/oauth",
           "concepts/agent-workspace",
           "concepts/multi-agent",
           "concepts/compaction",
@@ -554,6 +560,7 @@
           "concepts/provider-routing",
           "concepts/groups",
           "concepts/group-messages",
+          "concepts/typing-indicators",
           "concepts/queue",
           "concepts/models",
           "concepts/model-failover",
@@ -568,6 +575,7 @@
           "gateway/pairing",
           "gateway/gateway-lock",
           "gateway/configuration",
+          "gateway/configuration-examples",
           "gateway/background-process",
           "gateway/health",
           "gateway/heartbeat",
@@ -651,7 +659,8 @@
           "platforms/ios",
           "platforms/android",
           "platforms/windows",
-          "platforms/linux"
+          "platforms/linux",
+          "platforms/exe-dev"
         ]
       },
       {

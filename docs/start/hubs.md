@@ -60,6 +60,7 @@ Use these hubs to discover every page, including deep dives and reference docs t
 - [Telegram](https://docs.clawd.bot/providers/telegram)
 - [Telegram (grammY notes)](https://docs.clawd.bot/providers/grammy)
 - [Slack](https://docs.clawd.bot/providers/slack)
+- [Rocket.Chat](https://docs.clawd.bot/providers/rocketchat)
 - [Discord](https://docs.clawd.bot/providers/discord)
 - [Signal](https://docs.clawd.bot/providers/signal)
 - [iMessage](https://docs.clawd.bot/providers/imessage)

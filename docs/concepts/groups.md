@@ -1,11 +1,11 @@
 ---
-summary: "Group chat behavior across surfaces (WhatsApp/Telegram/Discord/Slack/Signal/iMessage)"
+summary: "Group chat behavior across surfaces (WhatsApp/Telegram/Discord/Slack/Rocket.Chat/Signal/iMessage)"
 read_when:
   - Changing group chat behavior or mention gating
 ---
 # Groups
 
-Clawdbot treats group chats consistently across surfaces: WhatsApp, Telegram, Discord, Slack, Signal, iMessage.
+Clawdbot treats group chats consistently across surfaces: WhatsApp, Telegram, Discord, Slack, Rocket.Chat, Signal, iMessage.
 
 ## Session keys
 - Group sessions use `agent:<agentId>:<provider>:group:<id>` session keys (rooms/channels use `agent:<agentId>:<provider>:channel:<id>`).
@@ -38,6 +38,12 @@ Control how group/room messages are handled per provider:
     groupPolicy: "disabled",
     groupAllowFrom: ["chat_id:123"]
   },
+  rocketchat: {
+    groupPolicy: "disabled",
+    rooms: {
+      "general": { allow: true }
+    }
+  },
   discord: {
     groupPolicy: "allowlist",
     guilds: {
@@ -62,6 +68,7 @@ Notes:
 - WhatsApp/Telegram/Signal/iMessage: use `groupAllowFrom` (fallback: explicit `allowFrom`).
 - Discord: allowlist uses `discord.guilds.<id>.channels`.
 - Slack: allowlist uses `slack.channels`.
+- Rocket.Chat: allowlist uses `rocketchat.rooms`.
 - Group DMs are controlled separately (`discord.dm.*`, `slack.dm.*`).
 - Telegram allowlist can match user IDs (`"123456789"`, `"telegram:123456789"`, `"tg:123456789"`) or usernames (`"@alice"` or `"alice"`); prefixes are case-insensitive.
 
@@ -80,6 +87,13 @@ Group messages require a mention unless overridden per group. Defaults live per 
     groups: {
       "*": { requireMention: true },
       "123456789": { requireMention: false }
+    }
+  },
+  rocketchat: {
+    requireMention: true,
+    rooms: {
+      "*": { requireMention: true },
+      "general": { requireMention: false }
     }
   },
   imessage: {

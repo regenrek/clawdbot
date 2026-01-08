@@ -25,6 +25,10 @@ import {
 import { resolveGatewayPort, resolveIsNixMode } from "../config/paths.js";
 import { GATEWAY_LAUNCH_AGENT_LABEL } from "../daemon/constants.js";
 import {
+  findExtraGatewayServices,
+  renderGatewayServiceCleanupHints,
+} from "../daemon/inspect.js";
+import {
   findLegacyGatewayServices,
   uninstallLegacyGatewayServices,
 } from "../daemon/legacy.js";
@@ -72,6 +76,7 @@ async function noteSecurityWarnings(cfg: ClawdbotConfig) {
     label: string;
     provider:
       | "telegram"
+      | "rocketchat"
       | "signal"
       | "imessage"
       | "discord"
@@ -208,6 +213,20 @@ async function noteSecurityWarnings(cfg: ClawdbotConfig) {
       approveHint:
         "Approve via: clawdbot pairing list --provider slack / clawdbot pairing approve --provider slack <code>",
       normalizeEntry: (raw) => raw.replace(/^(slack|user):/i, ""),
+    });
+  }
+
+  if (cfg.rocketchat?.enabled !== false) {
+    await warnDmPolicy({
+      label: "Rocket.Chat",
+      provider: "rocketchat",
+      dmPolicy: cfg.rocketchat?.dmPolicy ?? "pairing",
+      allowFrom: cfg.rocketchat?.allowFrom ?? [],
+      allowFromPath: "rocketchat.",
+      approveHint:
+        "Approve via: clawdbot pairing list --provider rocketchat / clawdbot pairing approve --provider rocketchat <code>",
+      normalizeEntry: (raw) =>
+        raw.replace(/^(rocketchat|rc|user):/i, "").replace(/^@/, ""),
     });
   }
 
@@ -351,6 +370,7 @@ type DoctorOptions = {
   workspaceSuggestions?: boolean;
   yes?: boolean;
   nonInteractive?: boolean;
+  deep?: boolean;
 };
 
 type DoctorPrompter = {
@@ -863,6 +883,34 @@ async function maybeMigrateLegacyGatewayService(
   });
 }
 
+async function maybeScanExtraGatewayServices(options: DoctorOptions) {
+  const extraServices = await findExtraGatewayServices(process.env, {
+    deep: options.deep,
+  });
+  if (extraServices.length === 0) return;
+
+  note(
+    extraServices
+      .map((svc) => `- ${svc.label} (${svc.scope}, ${svc.detail})`)
+      .join("\n"),
+    "Other gateway-like services detected",
+  );
+
+  const cleanupHints = renderGatewayServiceCleanupHints();
+  if (cleanupHints.length > 0) {
+    note(cleanupHints.map((hint) => `- ${hint}`).join("\n"), "Cleanup hints");
+  }
+
+  note(
+    [
+      "Recommendation: run a single gateway per machine.",
+      "One gateway supports multiple agents.",
+      "If you need multiple gateways, isolate ports + config/state (see docs: /gateway#multiple-gateways-same-host).",
+    ].join("\n"),
+    "Gateway recommendation",
+  );
+}
+
 export async function doctorCommand(
   runtime: RuntimeEnv = defaultRuntime,
   options: DoctorOptions = {},
@@ -939,6 +987,7 @@ export async function doctorCommand(
   cfg = await maybeRepairSandboxImages(cfg, runtime, prompter);
 
   await maybeMigrateLegacyGatewayService(cfg, runtime, prompter);
+  await maybeScanExtraGatewayServices(options);
 
   await noteSecurityWarnings(cfg);
 

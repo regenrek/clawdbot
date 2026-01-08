@@ -65,6 +65,10 @@ import {
   prependSystemEvents,
 } from "./reply/session-updates.js";
 import { createTypingController } from "./reply/typing.js";
+import {
+  createTypingSignaler,
+  resolveTypingMode,
+} from "./reply/typing-mode.js";
 import type { MsgContext, TemplateContext } from "./templating.js";
 import {
   type ElevatedLevel,
@@ -109,7 +113,7 @@ function stripSenderPrefix(value?: string) {
   if (!value) return "";
   const trimmed = value.trim();
   return trimmed.replace(
-    /^(whatsapp|telegram|discord|signal|imessage|webchat|user|group|channel):/i,
+    /^(whatsapp|telegram|discord|rocketchat|signal|imessage|webchat|user|group|channel):/i,
     "",
   );
 }
@@ -131,6 +135,8 @@ function resolveElevatedAllowList(
       if (hasExplicit) return allowFrom?.discord;
       return discordFallback;
     }
+    case "rocketchat":
+      return allowFrom?.rocketchat;
     case "signal":
       return allowFrom?.signal;
     case "imessage":
@@ -594,7 +600,17 @@ export async function getReplyFromConfig(
   const isGroupChat = sessionCtx.ChatType === "group";
   const wasMentioned = ctx.WasMentioned === true;
   const isHeartbeat = opts?.isHeartbeat === true;
-  const shouldEagerType = (!isGroupChat || wasMentioned) && !isHeartbeat;
+  const typingMode = resolveTypingMode({
+    configured: sessionCfg?.typingMode ?? agentCfg?.typingMode,
+    isGroupChat,
+    wasMentioned,
+    isHeartbeat,
+  });
+  const typingSignals = createTypingSignaler({
+    typing,
+    mode: typingMode,
+    isHeartbeat,
+  });
   const shouldInjectGroupIntro = Boolean(
     isGroupChat &&
       (isFirstTurnInSession || sessionEntry?.groupActivationNeedsSystemIntro),
@@ -788,8 +804,8 @@ export async function getReplyFromConfig(
     },
   };
 
-  if (shouldEagerType) {
-    await typing.startTypingLoop();
+  if (typingSignals.shouldStartImmediately) {
+    await typingSignals.signalRunStart();
   }
 
   return runReplyAgent({
@@ -816,6 +832,7 @@ export async function getReplyFromConfig(
     resolvedBlockStreamingBreak,
     sessionCtx,
     shouldInjectGroupIntro,
+    typingMode,
   });
 }
 

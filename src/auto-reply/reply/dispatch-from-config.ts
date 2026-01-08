@@ -6,6 +6,13 @@ import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import type { ReplyDispatcher, ReplyDispatchKind } from "./reply-dispatcher.js";
 import { isRoutableChannel, routeReply } from "./route-reply.js";
 
+function splitThreadId(raw?: number | string) {
+  return {
+    threadId: typeof raw === "number" ? raw : undefined,
+    providerThreadId: typeof raw === "string" ? raw : undefined,
+  };
+}
+
 type DispatchFromConfigResult = {
   queuedFinal: boolean;
   counts: Record<ReplyDispatchKind, number>;
@@ -45,12 +52,14 @@ export async function dispatchReplyFromConfig(params: {
     // TypeScript doesn't narrow these from the shouldRouteToOriginating check,
     // but they're guaranteed non-null when this function is called.
     if (!originatingChannel || !originatingTo) return;
+    const { threadId, providerThreadId } = splitThreadId(ctx.MessageThreadId);
     const result = await routeReply({
       payload,
       channel: originatingChannel,
       to: originatingTo,
       accountId: ctx.AccountId,
-      threadId: ctx.MessageThreadId,
+      threadId,
+      providerThreadId,
       cfg,
     });
     if (!result.ok) {
@@ -96,13 +105,15 @@ export async function dispatchReplyFromConfig(params: {
   let routedFinalCount = 0;
   for (const reply of replies) {
     if (shouldRouteToOriginating && originatingChannel && originatingTo) {
+      const { threadId, providerThreadId } = splitThreadId(ctx.MessageThreadId);
       // Route final reply to originating channel.
       const result = await routeReply({
         payload: reply,
         channel: originatingChannel,
         to: originatingTo,
         accountId: ctx.AccountId,
-        threadId: ctx.MessageThreadId,
+        threadId,
+        providerThreadId,
         cfg,
       });
       if (!result.ok) {

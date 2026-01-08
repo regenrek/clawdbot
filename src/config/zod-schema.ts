@@ -104,6 +104,7 @@ const QueueModeBySurfaceSchema = z
     telegram: QueueModeSchema.optional(),
     discord: QueueModeSchema.optional(),
     slack: QueueModeSchema.optional(),
+    rocketchat: QueueModeSchema.optional(),
     signal: QueueModeSchema.optional(),
     imessage: QueueModeSchema.optional(),
     webchat: QueueModeSchema.optional(),
@@ -129,6 +130,14 @@ const SessionSchema = z
     heartbeatIdleMinutes: z.number().int().positive().optional(),
     store: z.string().optional(),
     typingIntervalSeconds: z.number().int().positive().optional(),
+    typingMode: z
+      .union([
+        z.literal("never"),
+        z.literal("instant"),
+        z.literal("thinking"),
+        z.literal("message"),
+      ])
+      .optional(),
     mainKey: z.string().optional(),
     sendPolicy: z
       .object({
@@ -193,6 +202,7 @@ const HeartbeatSchema = z
         z.literal("telegram"),
         z.literal("discord"),
         z.literal("slack"),
+        z.literal("rocketchat"),
         z.literal("signal"),
         z.literal("imessage"),
         z.literal("none"),
@@ -335,6 +345,7 @@ const HookMappingSchema = z
         z.literal("telegram"),
         z.literal("discord"),
         z.literal("slack"),
+        z.literal("rocketchat"),
         z.literal("signal"),
         z.literal("imessage"),
       ])
@@ -595,6 +606,14 @@ export const ClawdbotSchema = z.object({
       timeoutSeconds: z.number().int().positive().optional(),
       mediaMaxMb: z.number().positive().optional(),
       typingIntervalSeconds: z.number().int().positive().optional(),
+      typingMode: z
+        .union([
+          z.literal("never"),
+          z.literal("instant"),
+          z.literal("thinking"),
+          z.literal("message"),
+        ])
+        .optional(),
       heartbeat: HeartbeatSchema,
       maxConcurrent: z.number().int().positive().optional(),
       subagents: z
@@ -625,6 +644,7 @@ export const ClawdbotSchema = z.object({
               telegram: z.array(z.union([z.string(), z.number()])).optional(),
               discord: z.array(z.union([z.string(), z.number()])).optional(),
               slack: z.array(z.union([z.string(), z.number()])).optional(),
+              rocketchat: z.array(z.union([z.string(), z.number()])).optional(),
               signal: z.array(z.union([z.string(), z.number()])).optional(),
               imessage: z.array(z.union([z.string(), z.number()])).optional(),
               webchat: z.array(z.union([z.string(), z.number()])).optional(),
@@ -1057,6 +1077,62 @@ export const ClawdbotSchema = z.object({
             .optional(),
         )
         .optional(),
+    })
+    .optional(),
+  rocketchat: z
+    .object({
+      enabled: z.boolean().optional(),
+      baseUrl: z.string().optional(),
+      authToken: z.string().optional(),
+      userId: z.string().optional(),
+      botUsername: z.string().optional(),
+      alias: z.string().optional(),
+      avatarUrl: z.string().optional(),
+      emoji: z.string().optional(),
+      groupPolicy: GroupPolicySchema.optional().default("open"),
+      requireMention: z.boolean().optional(),
+      textChunkLimit: z.number().int().positive().optional(),
+      mediaMaxMb: z.number().positive().optional(),
+      retry: RetryConfigSchema,
+      dmPolicy: DmPolicySchema.optional().default("pairing"),
+      allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
+      rooms: z
+        .record(
+          z.string(),
+          z
+            .object({
+              enabled: z.boolean().optional(),
+              allow: z.boolean().optional(),
+              requireMention: z.boolean().optional(),
+              users: z.array(z.union([z.string(), z.number()])).optional(),
+              skills: z.array(z.string()).optional(),
+              systemPrompt: z.string().optional(),
+            })
+            .optional(),
+        )
+        .optional(),
+      webhook: z
+        .object({
+          host: z.string().optional(),
+          port: z.number().int().positive().optional(),
+          path: z.string().optional(),
+          token: z.string().optional(),
+          maxBodyBytes: z.number().int().positive().optional(),
+        })
+        .optional(),
+    })
+    .superRefine((value, ctx) => {
+      if (value.dmPolicy !== "open") return;
+      const allow = (value.allowFrom ?? [])
+        .map((v) => String(v).trim())
+        .filter(Boolean);
+      if (allow.includes("*")) return;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["allowFrom"],
+        message:
+          'rocketchat.dmPolicy="open" requires rocketchat.allowFrom to include "*"',
+      });
     })
     .optional(),
   signal: z

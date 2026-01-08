@@ -6,6 +6,7 @@ import type {
   DiscordActionForm,
   DiscordForm,
   IMessageForm,
+  RocketChatForm,
   SlackActionForm,
   SlackForm,
   SignalForm,
@@ -61,6 +62,12 @@ export type ConnectionsProps = {
   slackAppTokenLocked: boolean;
   slackSaving: boolean;
   slackStatus: string | null;
+  rocketchatForm: RocketChatForm;
+  rocketchatBaseUrlLocked: boolean;
+  rocketchatAuthLocked: boolean;
+  rocketchatUserIdLocked: boolean;
+  rocketchatSaving: boolean;
+  rocketchatStatus: string | null;
   signalForm: SignalForm;
   signalSaving: boolean;
   signalStatus: string | null;
@@ -77,6 +84,8 @@ export type ConnectionsProps = {
   onDiscordSave: () => void;
   onSlackChange: (patch: Partial<SlackForm>) => void;
   onSlackSave: () => void;
+  onRocketChatChange: (patch: Partial<RocketChatForm>) => void;
+  onRocketChatSave: () => void;
   onSignalChange: (patch: Partial<SignalForm>) => void;
   onSignalSave: () => void;
   onIMessageChange: (patch: Partial<IMessageForm>) => void;
@@ -88,6 +97,7 @@ export function renderConnections(props: ConnectionsProps) {
   const telegram = props.snapshot?.telegram;
   const discord = props.snapshot?.discord ?? null;
   const slack = props.snapshot?.slack ?? null;
+  const rocketchat = props.snapshot?.rocketchat ?? null;
   const signal = props.snapshot?.signal ?? null;
   const imessage = props.snapshot?.imessage ?? null;
   const providerOrder: ProviderKey[] = [
@@ -95,6 +105,7 @@ export function renderConnections(props: ConnectionsProps) {
     "telegram",
     "discord",
     "slack",
+    "rocketchat",
     "signal",
     "imessage",
   ];
@@ -117,6 +128,7 @@ export function renderConnections(props: ConnectionsProps) {
           telegram,
           discord,
           slack,
+          rocketchat,
           signal,
           imessage,
         }),
@@ -158,6 +170,7 @@ type ProviderKey =
   | "telegram"
   | "discord"
   | "slack"
+  | "rocketchat"
   | "signal"
   | "imessage";
 
@@ -177,6 +190,10 @@ function providerEnabled(key: ProviderKey, props: ConnectionsProps) {
       return Boolean(snapshot.discord?.configured || snapshot.discord?.running);
     case "slack":
       return Boolean(snapshot.slack?.configured || snapshot.slack?.running);
+    case "rocketchat":
+      return Boolean(
+        snapshot.rocketchat?.configured || snapshot.rocketchat?.running,
+      );
     case "signal":
       return Boolean(snapshot.signal?.configured || snapshot.signal?.running);
     case "imessage":
@@ -194,6 +211,7 @@ function renderProvider(
     telegram?: ProvidersStatusSnapshot["telegram"];
     discord?: ProvidersStatusSnapshot["discord"] | null;
     slack?: ProvidersStatusSnapshot["slack"] | null;
+    rocketchat?: ProvidersStatusSnapshot["rocketchat"] | null;
     signal?: ProvidersStatusSnapshot["signal"] | null;
     imessage?: ProvidersStatusSnapshot["imessage"] | null;
   },
@@ -1351,6 +1369,323 @@ function renderProvider(
               @click=${() => props.onSlackSave()}
             >
               ${props.slackSaving ? "Saving…" : "Save"}
+            </button>
+            <button class="btn" @click=${() => props.onRefresh(true)}>
+              Probe
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    case "rocketchat": {
+      const rocketchat = data.rocketchat;
+      const botUser = rocketchat?.probe?.user?.username;
+      return html`
+        <div class="card">
+          <div class="card-title">Rocket.Chat</div>
+          <div class="card-sub">Outgoing webhook + REST API credentials.</div>
+
+          <div class="status-list" style="margin-top: 16px;">
+            <div>
+              <span class="label">Configured</span>
+              <span>${rocketchat?.configured ? "Yes" : "No"}</span>
+            </div>
+            <div>
+              <span class="label">Running</span>
+              <span>${rocketchat?.running ? "Yes" : "No"}</span>
+            </div>
+            <div>
+              <span class="label">Base URL</span>
+              <span>${rocketchat?.baseUrl ?? "n/a"}</span>
+            </div>
+            <div>
+              <span class="label">Bot user</span>
+              <span>${botUser ? `@${botUser}` : "n/a"}</span>
+            </div>
+            <div>
+              <span class="label">Last start</span>
+              <span>
+                ${rocketchat?.lastStartAt
+                  ? formatAgo(rocketchat.lastStartAt)
+                  : "n/a"}
+              </span>
+            </div>
+            <div>
+              <span class="label">Last probe</span>
+              <span>
+                ${rocketchat?.lastProbeAt
+                  ? formatAgo(rocketchat.lastProbeAt)
+                  : "n/a"}
+              </span>
+            </div>
+          </div>
+
+          ${rocketchat?.lastError
+            ? html`<div class="callout danger" style="margin-top: 12px;">
+                ${rocketchat.lastError}
+              </div>`
+            : nothing}
+
+          ${rocketchat?.probe
+            ? html`<div class="callout" style="margin-top: 12px;">
+                Probe ${rocketchat.probe.ok ? "ok" : "failed"} ·
+                ${rocketchat.probe.status ?? ""} ${rocketchat.probe.error ?? ""}
+              </div>`
+            : nothing}
+
+          <div class="form-grid" style="margin-top: 16px;">
+            <label class="field">
+              <span>Enabled</span>
+              <select
+                .value=${props.rocketchatForm.enabled ? "yes" : "no"}
+                @change=${(e: Event) =>
+                  props.onRocketChatChange({
+                    enabled: (e.target as HTMLSelectElement).value === "yes",
+                  })}
+              >
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Base URL</span>
+              <input
+                .value=${props.rocketchatForm.baseUrl}
+                ?disabled=${props.rocketchatBaseUrlLocked}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    baseUrl: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="https://rocketchat.mycompany.com"
+              />
+            </label>
+            <label class="field">
+              <span>Auth token</span>
+              <input
+                type="password"
+                .value=${props.rocketchatForm.authToken}
+                ?disabled=${props.rocketchatAuthLocked}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    authToken: (e.target as HTMLInputElement).value,
+                  })}
+              />
+            </label>
+            <label class="field">
+              <span>User ID</span>
+              <input
+                .value=${props.rocketchatForm.userId}
+                ?disabled=${props.rocketchatUserIdLocked}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    userId: (e.target as HTMLInputElement).value,
+                  })}
+              />
+            </label>
+            <label class="field">
+              <span>Bot username</span>
+              <input
+                .value=${props.rocketchatForm.botUsername}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    botUsername: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="clawdbot"
+              />
+            </label>
+            <label class="field">
+              <span>Alias</span>
+              <input
+                .value=${props.rocketchatForm.alias}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    alias: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="Clawdbot"
+              />
+            </label>
+            <label class="field">
+              <span>Avatar URL</span>
+              <input
+                .value=${props.rocketchatForm.avatarUrl}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    avatarUrl: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="https://..."
+              />
+            </label>
+            <label class="field">
+              <span>Emoji avatar</span>
+              <input
+                .value=${props.rocketchatForm.emoji}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    emoji: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder=":robot_face:"
+              />
+            </label>
+            <label class="field">
+              <span>DM policy</span>
+              <select
+                .value=${props.rocketchatForm.dmPolicy}
+                @change=${(e: Event) =>
+                  props.onRocketChatChange({
+                    dmPolicy: (e.target as HTMLSelectElement)
+                      .value as RocketChatForm["dmPolicy"],
+                  })}
+              >
+                <option value="pairing">Pairing</option>
+                <option value="allowlist">Allowlist</option>
+                <option value="open">Open</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Allow DMs from</span>
+              <input
+                .value=${props.rocketchatForm.allowFrom}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    allowFrom: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="userId, @name, *"
+              />
+            </label>
+            <label class="field">
+              <span>Group policy</span>
+              <select
+                .value=${props.rocketchatForm.groupPolicy}
+                @change=${(e: Event) =>
+                  props.onRocketChatChange({
+                    groupPolicy: (e.target as HTMLSelectElement)
+                      .value as RocketChatForm["groupPolicy"],
+                  })}
+              >
+                <option value="open">Open</option>
+                <option value="allowlist">Allowlist</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Require mention</span>
+              <select
+                .value=${props.rocketchatForm.requireMention ? "yes" : "no"}
+                @change=${(e: Event) =>
+                  props.onRocketChatChange({
+                    requireMention:
+                      (e.target as HTMLSelectElement).value === "yes",
+                  })}
+              >
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Rooms allowlist</span>
+              <input
+                .value=${props.rocketchatForm.rooms}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    rooms: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="general, #ops, roomId"
+              />
+            </label>
+            <label class="field">
+              <span>Text chunk limit</span>
+              <input
+                .value=${props.rocketchatForm.textChunkLimit}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    textChunkLimit: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="4000"
+              />
+            </label>
+            <label class="field">
+              <span>Media max (MB)</span>
+              <input
+                .value=${props.rocketchatForm.mediaMaxMb}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    mediaMaxMb: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="20"
+              />
+            </label>
+            <label class="field">
+              <span>Webhook token</span>
+              <input
+                type="password"
+                .value=${props.rocketchatForm.webhookToken}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    webhookToken: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="outgoing webhook token"
+              />
+            </label>
+            <label class="field">
+              <span>Webhook host</span>
+              <input
+                .value=${props.rocketchatForm.webhookHost}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    webhookHost: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="0.0.0.0"
+              />
+            </label>
+            <label class="field">
+              <span>Webhook port</span>
+              <input
+                .value=${props.rocketchatForm.webhookPort}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    webhookPort: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="8790"
+              />
+            </label>
+            <label class="field">
+              <span>Webhook path</span>
+              <input
+                .value=${props.rocketchatForm.webhookPath}
+                @input=${(e: Event) =>
+                  props.onRocketChatChange({
+                    webhookPath: (e.target as HTMLInputElement).value,
+                  })}
+                placeholder="/rocketchat/outgoing"
+              />
+            </label>
+          </div>
+
+          ${props.rocketchatBaseUrlLocked ||
+          props.rocketchatAuthLocked ||
+          props.rocketchatUserIdLocked
+            ? html`<div class="callout" style="margin-top: 12px;">
+                ${props.rocketchatBaseUrlLocked ? "ROCKETCHAT_BASE_URL " : ""}
+                ${props.rocketchatAuthLocked ? "ROCKETCHAT_AUTH_TOKEN " : ""}
+                ${props.rocketchatUserIdLocked ? "ROCKETCHAT_USER_ID " : ""}
+                is set in the environment. Config edits will not override it.
+              </div>`
+            : nothing}
+
+          ${props.rocketchatStatus
+            ? html`<div class="callout" style="margin-top: 12px;">
+                ${props.rocketchatStatus}
+              </div>`
+            : nothing}
+
+          <div class="row" style="margin-top: 14px;">
+            <button
+              class="btn primary"
+              ?disabled=${props.rocketchatSaving}
+              @click=${() => props.onRocketChatSave()}
+            >
+              ${props.rocketchatSaving ? "Saving…" : "Save"}
             </button>
             <button class="btn" @click=${() => props.onRefresh(true)}>
               Probe

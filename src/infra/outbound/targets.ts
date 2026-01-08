@@ -7,6 +7,7 @@ export type OutboundProvider =
   | "telegram"
   | "discord"
   | "slack"
+  | "rocketchat"
   | "signal"
   | "imessage"
   | "none";
@@ -29,6 +30,7 @@ export function resolveOutboundTarget(params: {
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage"
     | "webchat";
@@ -93,6 +95,17 @@ export function resolveOutboundTarget(params: {
     }
     return { ok: true, to: trimmed };
   }
+  if (params.provider === "rocketchat") {
+    if (!trimmed) {
+      return {
+        ok: false,
+        error: new Error(
+          "Delivering to Rocket.Chat requires --to <room:ID|#channel|@user|roomId>",
+        ),
+      };
+    }
+    return { ok: true, to: trimmed };
+  }
   if (params.provider === "imessage") {
     if (!trimmed) {
       return {
@@ -123,6 +136,7 @@ export function resolveHeartbeatDeliveryTarget(params: {
     rawTarget === "telegram" ||
     rawTarget === "discord" ||
     rawTarget === "slack" ||
+    rawTarget === "rocketchat" ||
     rawTarget === "signal" ||
     rawTarget === "imessage" ||
     rawTarget === "none" ||
@@ -150,6 +164,7 @@ export function resolveHeartbeatDeliveryTarget(params: {
     | "telegram"
     | "discord"
     | "slack"
+    | "rocketchat"
     | "signal"
     | "imessage"
     | undefined =
@@ -159,6 +174,7 @@ export function resolveHeartbeatDeliveryTarget(params: {
           target === "telegram" ||
           target === "discord" ||
           target === "slack" ||
+          target === "rocketchat" ||
           target === "signal" ||
           target === "imessage"
         ? target

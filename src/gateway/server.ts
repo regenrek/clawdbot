@@ -158,6 +158,7 @@ const logWhatsApp = logProviders.child("whatsapp");
 const logTelegram = logProviders.child("telegram");
 const logDiscord = logProviders.child("discord");
 const logSlack = logProviders.child("slack");
+const logRocketChat = logProviders.child("rocketchat");
 const logSignal = logProviders.child("signal");
 const logIMessage = logProviders.child("imessage");
 const canvasRuntime = runtimeForLogger(logCanvas);
@@ -165,6 +166,7 @@ const whatsappRuntimeEnv = runtimeForLogger(logWhatsApp);
 const telegramRuntimeEnv = runtimeForLogger(logTelegram);
 const discordRuntimeEnv = runtimeForLogger(logDiscord);
 const slackRuntimeEnv = runtimeForLogger(logSlack);
+const rocketchatRuntimeEnv = runtimeForLogger(logRocketChat);
 const signalRuntimeEnv = runtimeForLogger(logSignal);
 const imessageRuntimeEnv = runtimeForLogger(logIMessage);
 
@@ -495,6 +497,7 @@ export async function startGatewayServer(
       | "telegram"
       | "discord"
       | "slack"
+      | "rocketchat"
       | "signal"
       | "imessage";
     to?: string;
@@ -747,12 +750,14 @@ export async function startGatewayServer(
     logTelegram,
     logDiscord,
     logSlack,
+    logRocketChat,
     logSignal,
     logIMessage,
     whatsappRuntimeEnv,
     telegramRuntimeEnv,
     discordRuntimeEnv,
     slackRuntimeEnv,
+    rocketchatRuntimeEnv,
     signalRuntimeEnv,
     imessageRuntimeEnv,
   });
@@ -763,12 +768,14 @@ export async function startGatewayServer(
     startTelegramProvider,
     startDiscordProvider,
     startSlackProvider,
+    startRocketChatProvider,
     startSignalProvider,
     startIMessageProvider,
     stopWhatsAppProvider,
     stopTelegramProvider,
     stopDiscordProvider,
     stopSlackProvider,
+    stopRocketChatProvider,
     stopSignalProvider,
     stopIMessageProvider,
     markWhatsAppLoggedOut,
@@ -1751,6 +1758,13 @@ export async function startGatewayServer(
         if (plan.restartProviders.has("slack")) {
           await restartProvider("slack", stopSlackProvider, startSlackProvider);
         }
+        if (plan.restartProviders.has("rocketchat")) {
+          await restartProvider(
+            "rocketchat",
+            stopRocketChatProvider,
+            startRocketChatProvider,
+          );
+        }
         if (plan.restartProviders.has("signal")) {
           await restartProvider(
             "signal",
@@ -1859,6 +1873,7 @@ export async function startGatewayServer(
       await stopTelegramProvider();
       await stopDiscordProvider();
       await stopSlackProvider();
+      await stopRocketChatProvider();
       await stopSignalProvider();
       await stopIMessageProvider();
       await stopGmailWatcher();

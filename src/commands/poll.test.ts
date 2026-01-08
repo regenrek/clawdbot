@@ -29,6 +29,7 @@ const deps: CliDeps = {
   sendMessageTelegram: vi.fn(),
   sendMessageDiscord: vi.fn(),
   sendMessageSlack: vi.fn(),
+  sendMessageRocketChat: vi.fn(),
   sendMessageSignal: vi.fn(),
   sendMessageIMessage: vi.fn(),
 };

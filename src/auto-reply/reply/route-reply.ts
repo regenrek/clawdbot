@@ -10,6 +10,7 @@
 import type { ClawdbotConfig } from "../../config/config.js";
 import { sendMessageDiscord } from "../../discord/send.js";
 import { sendMessageIMessage } from "../../imessage/send.js";
+import { sendMessageRocketChat } from "../../rocketchat/send.js";
 import { sendMessageSignal } from "../../signal/send.js";
 import { sendMessageSlack } from "../../slack/send.js";
 import { sendMessageTelegram } from "../../telegram/send.js";
@@ -26,8 +27,10 @@ export type RouteReplyParams = {
   to: string;
   /** Provider account id (multi-account). */
   accountId?: string;
-  /** Telegram message thread id (forum topics). */
+  /** Provider thread id (number). */
   threadId?: number;
+  /** Provider thread id (string). */
+  providerThreadId?: string;
   /** Config for provider-specific settings. */
   cfg: ClawdbotConfig;
 };
@@ -52,7 +55,7 @@ export type RouteReplyResult = {
 export async function routeReply(
   params: RouteReplyParams,
 ): Promise<RouteReplyResult> {
-  const { payload, channel, to, accountId, threadId } = params;
+  const { payload, channel, to, accountId, threadId, providerThreadId } = params;
 
   // Debug: `pnpm test src/auto-reply/reply/route-reply.test.ts`
   const text = payload.text ?? "";
@@ -86,6 +89,16 @@ export async function routeReply(
         const result = await sendMessageSlack(to, text, {
           mediaUrl,
           threadTs: replyToId,
+        });
+        return { ok: true, messageId: result.messageId };
+      }
+
+      case "rocketchat": {
+        const thread =
+          providerThreadId ?? (typeof replyToId === "string" ? replyToId : undefined);
+        const result = await sendMessageRocketChat(to, text, {
+          mediaUrl,
+          threadId: thread,
         });
         return { ok: true, messageId: result.messageId };
       }
@@ -174,6 +187,7 @@ export function isRoutableChannel(
     "telegram",
     "slack",
     "discord",
+    "rocketchat",
     "signal",
     "imessage",
     "whatsapp",

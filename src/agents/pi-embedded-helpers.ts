@@ -272,3 +272,124 @@ export function pickFallbackThinkingLevel(params: {
   }
   return undefined;
 }
+
+/**
+ * Validates and fixes conversation turn sequences for Gemini API.
+ * Gemini requires strict alternating user→assistant→tool→user pattern.
+ * This function:
+ * 1. Detects consecutive messages from the same role
+ * 2. Merges consecutive assistant messages together
+ * 3. Preserves metadata (usage, stopReason, etc.)
+ *
+ * This prevents the "function call turn comes immediately after a user turn or after a function response turn" error.
+ */
+export function validateGeminiTurns(messages: AgentMessage[]): AgentMessage[] {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return messages;
+  }
+
+  const result: AgentMessage[] = [];
+  let lastRole: string | undefined;
+
+  for (const msg of messages) {
+    if (!msg || typeof msg !== "object") {
+      result.push(msg);
+      continue;
+    }
+
+    const msgRole = (msg as { role?: unknown }).role as string | undefined;
+    if (!msgRole) {
+      result.push(msg);
+      continue;
+    }
+
+    // Check if this message has the same role as the last one
+    if (msgRole === lastRole && lastRole === "assistant") {
+      // Merge consecutive assistant messages
+      const lastMsg = result[result.length - 1];
+      const currentMsg = msg as Extract<AgentMessage, { role: "assistant" }>;
+
+      if (lastMsg && typeof lastMsg === "object") {
+        const lastAsst = lastMsg as Extract<
+          AgentMessage,
+          { role: "assistant" }
+        >;
+
+        // Merge content blocks
+        const mergedContent = [
+          ...(Array.isArray(lastAsst.content) ? lastAsst.content : []),
+          ...(Array.isArray(currentMsg.content) ? currentMsg.content : []),
+        ];
+
+        // Preserve metadata from the later message (more recent)
+        const merged: Extract<AgentMessage, { role: "assistant" }> = {
+          ...lastAsst,
+          content: mergedContent,
+          // Take timestamps, usage, stopReason from the newer message if present
+          ...(currentMsg.usage && { usage: currentMsg.usage }),
+          ...(currentMsg.stopReason && { stopReason: currentMsg.stopReason }),
+          ...(currentMsg.errorMessage && {
+            errorMessage: currentMsg.errorMessage,
+          }),
+        };
+
+        // Replace the last message with merged version
+        result[result.length - 1] = merged;
+        continue;
+      }
+    }
+
+    // Not a consecutive duplicate, add normally
+    result.push(msg);
+    lastRole = msgRole;
+  }
+
+  return result;
+}
+
+// ── Messaging tool duplicate detection ──────────────────────────────────────
+// When the agent uses a messaging tool (telegram, discord, slack, sessions_send)
+// to send a message, we track the text so we can suppress duplicate block replies.
+// The LLM sometimes elaborates or wraps the same content, so we use substring matching.
+
+const MIN_DUPLICATE_TEXT_LENGTH = 10;
+
+/**
+ * Normalize text for duplicate comparison.
+ * - Trims whitespace
+ * - Lowercases
+ * - Strips emoji (Emoji_Presentation and Extended_Pictographic)
+ * - Collapses multiple spaces to single space
+ */
+export function normalizeTextForComparison(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Check if a text is a duplicate of any previously sent messaging tool text.
+ * Uses substring matching to handle LLM elaboration (e.g., wrapping in quotes,
+ * adding context, or slight rephrasing that includes the original).
+ */
+export function isMessagingToolDuplicate(
+  text: string,
+  sentTexts: string[],
+): boolean {
+  if (sentTexts.length === 0) return false;
+  const normalized = normalizeTextForComparison(text);
+  if (!normalized || normalized.length < MIN_DUPLICATE_TEXT_LENGTH)
+    return false;
+  return sentTexts.some((sent) => {
+    const normalizedSent = normalizeTextForComparison(sent);
+    if (!normalizedSent || normalizedSent.length < MIN_DUPLICATE_TEXT_LENGTH)
+      return false;
+    // Substring match: either text contains the other
+    return (
+      normalized.includes(normalizedSent) || normalizedSent.includes(normalized)
+    );
+  });
+}

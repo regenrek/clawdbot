@@ -3,6 +3,7 @@ export type OriginatingChannelType =
   | "telegram"
   | "slack"
   | "discord"
+  | "rocketchat"
   | "signal"
   | "imessage"
   | "whatsapp"
@@ -48,8 +49,8 @@ export type MsgContext = {
   CommandAuthorized?: boolean;
   CommandSource?: "text" | "native";
   CommandTargetSessionKey?: string;
-  /** Telegram forum topic thread ID. */
-  MessageThreadId?: number;
+  /** Provider thread id (number or string). */
+  MessageThreadId?: number | string;
   /** Telegram forum supergroup marker. */
   IsForum?: boolean;
   /**

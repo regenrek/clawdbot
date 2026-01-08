@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyGoogleTurnOrderingFix,
   buildEmbeddedSandboxInfo,
+  createSystemPromptOverride,
   splitSdkTools,
 } from "./pi-embedded-runner.js";
 import type { SandboxContext } from "./sandbox.js";
@@ -102,6 +103,18 @@ describe("splitSdkTools", () => {
       "write",
     ]);
     expect(customTools.map((tool) => tool.name)).toEqual(["browser"]);
+  });
+});
+
+describe("createSystemPromptOverride", () => {
+  it("returns the override prompt regardless of default prompt", () => {
+    const override = createSystemPromptOverride("OVERRIDE");
+    expect(override("DEFAULT")).toBe("OVERRIDE");
+  });
+
+  it("returns an empty string for blank overrides", () => {
+    const override = createSystemPromptOverride("  \n  ");
+    expect(override("DEFAULT")).toBe("");
   });
 });
 

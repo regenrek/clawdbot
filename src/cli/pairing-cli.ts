@@ -8,6 +8,7 @@ import {
   listProviderPairingRequests,
   type PairingProvider,
 } from "../pairing/pairing-store.js";
+import { sendMessageRocketChat } from "../rocketchat/send.js";
 import { sendMessageSignal } from "../signal/send.js";
 import { sendMessageSlack } from "../slack/send.js";
 import { sendMessageTelegram } from "../telegram/send.js";
@@ -20,6 +21,7 @@ const PROVIDERS: PairingProvider[] = [
   "discord",
   "slack",
   "whatsapp",
+  "rocketchat",
 ];
 
 function parseProvider(raw: unknown): PairingProvider {
@@ -121,6 +123,16 @@ export function registerPairingCli(program: Command) {
       console.log(`Approved ${provider} sender ${approved.id}.`);
 
       if (!opts.notify) return;
+      if (provider === "rocketchat") {
+        const message =
+          "✅ Clawdbot access approved. Send a message to start chatting.";
+        const username = approved.entry?.meta?.username?.trim() || approved.id;
+        const target = username.startsWith("@") ? username : `@${username}`;
+        await sendMessageRocketChat(target, message).catch((err) => {
+          console.log(`Failed to notify requester: ${String(err)}`);
+        });
+        return;
+      }
       await notifyApproved(provider, approved.id).catch((err) => {
         console.log(`Failed to notify requester: ${String(err)}`);
       });

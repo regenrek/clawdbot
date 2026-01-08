@@ -77,6 +77,7 @@ clawdbot agents add <name>
    - WhatsApp: optional QR login.
    - Telegram: bot token.
    - Discord: bot token.
+   - Rocket.Chat: outgoing webhook + REST API token.
    - Signal: optional `signal-cli` install + account config.
    - iMessage: local `imsg` CLI path + DB access.
    - DM security: default is pairing (unknown DMs get a pairing code). Approve via `clawdbot pairing approve --provider <provider> <code>`.

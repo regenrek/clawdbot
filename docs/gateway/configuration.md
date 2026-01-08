@@ -260,7 +260,7 @@ Group messages default to **require mention** (either metadata mention or regex 
 }
 ```
 
-Mention gating defaults live per provider (`whatsapp.groups`, `telegram.groups`, `imessage.groups`, `discord.guilds`). When `*.groups` is set, it also acts as a group allowlist; include `"*"` to allow all groups.
+Mention gating defaults live per provider (`whatsapp.groups`, `telegram.groups`, `imessage.groups`, `discord.guilds`, `rocketchat.rooms`). When these allowlists are set, include `"*"` to allow all groups/rooms.
 
 To respond **only** to specific text triggers (ignoring native @-mentions):
 ```json5
@@ -312,6 +312,10 @@ Use `*.groupPolicy` to control whether group/room messages are accepted at all:
   slack: {
     groupPolicy: "allowlist",
     channels: { "#general": { allow: true } }
+  },
+  rocketchat: {
+    groupPolicy: "allowlist",
+    rooms: { "#general": { allow: true } }
   }
 }
 ```
@@ -322,6 +326,7 @@ Notes:
 - `"allowlist"`: only allow groups/rooms that match the configured allowlist.
 - WhatsApp/Telegram/Signal/iMessage use `groupAllowFrom` (fallback: explicit `allowFrom`).
 - Discord/Slack use channel allowlists (`discord.guilds.*.channels`, `slack.channels`).
+- Rocket.Chat uses room allowlists (`rocketchat.rooms`).
 - Group DMs (Discord/Slack) are still controlled by `dm.groupEnabled` + `dm.groupChannels`.
 
 ### Multi-agent routing (`routing.agents` + `routing.bindings`)
@@ -340,7 +345,7 @@ Run multiple isolated agents (separate workspace, `agentDir`, sessions) inside o
     - `scope`: `"session"` | `"agent"` | `"shared"`
     - `workspaceRoot`: custom sandbox workspace root
     - `tools`: per-agent sandbox tool policy (deny wins; overrides `agent.sandbox.tools`)
-  - `tools`: per-agent tool restrictions (applied before sandbox tool policy).
+  - `tools`: per-agent tool restrictions (overrides `agent.tools`; applied before sandbox tool policy).
     - `allow`: array of allowed tool names
     - `deny`: array of denied tool names (deny wins)
 - `routing.bindings[]`: routes inbound messages to an `agentId`.
@@ -483,6 +488,7 @@ Controls how inbound messages behave when an agent run is already active.
         whatsapp: "collect",
         telegram: "collect",
         discord: "collect",
+        rocketchat: "collect",
         imessage: "collect",
         webchat: "collect"
       }
@@ -719,6 +725,53 @@ Slack action groups (gate `slack` tool actions):
 | pins | enabled | Pin/unpin/list |
 | memberInfo | enabled | Member info |
 | emojiList | enabled | Custom emoji list |
+
+### `rocketchat` (outgoing webhook + REST)
+
+Rocket.Chat uses outgoing webhooks for inbound messages and the REST API for replies.
+
+```json5
+{
+  rocketchat: {
+    enabled: true,
+    baseUrl: "https://chat.example.com",
+    authToken: "rc-auth-token",
+    userId: "rc-user-id",
+    botUsername: "clawdbot",
+    alias: "Clawdbot",
+    dmPolicy: "pairing", // pairing | allowlist | open | disabled
+    allowFrom: ["@alice", "user:123", "*"], // optional; "open" requires ["*"]
+    groupPolicy: "open", // open | allowlist | disabled
+    requireMention: true,
+    rooms: {
+      general: { allow: true },
+      "#ops": { allow: true, requireMention: true },
+      "*": { requireMention: true }
+    },
+    webhook: {
+      token: "outgoing-token",
+      host: "0.0.0.0",
+      port: 8790,
+      path: "/rocketchat/outgoing"
+    },
+    textChunkLimit: 4000,
+    mediaMaxMb: 20,
+    retry: {
+      attempts: 3,
+      minDelayMs: 400,
+      maxDelayMs: 30000,
+      jitter: 0.1
+    }
+  }
+}
+```
+
+Clawdbot starts Rocket.Chat when a `rocketchat` config section exists and `rocketchat.webhook.token` is set (unless `rocketchat.enabled` is `false`). The REST credentials (`baseUrl`, `authToken`, `userId`) can be set via config or `ROCKETCHAT_BASE_URL`/`ROCKETCHAT_AUTH_TOKEN`/`ROCKETCHAT_USER_ID`. Use `room:<id>`, `#channel`, or `@username` for delivery targets.
+
+Notes:
+- Set the Rocket.Chat Outgoing Webhook token to match `rocketchat.webhook.token` and point the URL at the gateway webhook host/port/path.
+- `alias`, `avatarUrl`, and `emoji` require the Rocket.Chat `message-impersonate` permission for the bot user.
+- `rocketchat.rooms` keys can be room ids, names, or `#channel` names; use `*` for defaults.
 ### `imessage` (imsg CLI)
 
 Clawdbot spawns `imsg rpc` (JSON-RPC over stdio). No daemon or port required.
@@ -993,6 +1046,14 @@ Block streaming:
   ```
 See [/concepts/streaming](/concepts/streaming) for behavior + chunking details.
 
+Typing indicators:
+- `agent.typingMode`: `"never" | "instant" | "thinking" | "message"`. Defaults to
+  `instant` for direct chats / mentions and `message` for unmentioned group chats.
+- `session.typingMode`: per-session override for the mode.
+- `agent.typingIntervalSeconds`: how often the typing signal is refreshed (default: 6s).
+- `session.typingIntervalSeconds`: per-session override for the refresh interval.
+See [/concepts/typing-indicators](/concepts/typing-indicators) for behavior details.
+
 `agent.model.primary` should be set as `provider/model` (e.g. `anthropic/claude-opus-4-5`).
 Aliases come from `agent.models.*.alias` (e.g. `Opus`).
 If you omit the provider, CLAWDBOT currently assumes `anthropic` as a temporary
@@ -1004,8 +1065,8 @@ Z.AI models are available as `zai/<model>` (e.g. `zai/glm-4.7`) and require
 - `every`: duration string (`ms`, `s`, `m`, `h`); default unit minutes. Default:
   `30m`. Set `0m` to disable.
 - `model`: optional override model for heartbeat runs (`provider/model`).
-- `target`: optional delivery provider (`last`, `whatsapp`, `telegram`, `discord`, `slack`, `signal`, `imessage`, `none`). Default: `last`.
-- `to`: optional recipient override (provider-specific id, e.g. E.164 for WhatsApp, chat id for Telegram).
+- `target`: optional delivery provider (`last`, `whatsapp`, `telegram`, `discord`, `slack`, `rocketchat`, `signal`, `imessage`, `none`). Default: `last`.
+- `to`: optional recipient override (provider-specific id, e.g. E.164 for WhatsApp, chat id for Telegram, room id for Rocket.Chat).
 - `prompt`: optional override for the heartbeat body (default: `Read HEARTBEAT.md if exists. Consider outstanding tasks. Checkup sometimes on your human during (user local) day time.`). Overrides are sent verbatim; include a `Read HEARTBEAT.md if exists` line if you still want the file read.
 - `ackMaxChars`: max chars allowed after `HEARTBEAT_OK` before delivery (default: 30).
 
@@ -1042,6 +1103,7 @@ Example (disable browser/canvas everywhere):
   - `whatsapp`: E.164 numbers
   - `telegram`: chat ids or usernames
   - `discord`: user ids or usernames (falls back to `discord.dm.allowFrom` if omitted)
+  - `rocketchat`: user ids or usernames
   - `signal`: E.164 numbers
   - `imessage`: handles/chat ids
   - `webchat`: session ids or usernames
@@ -1524,7 +1586,7 @@ Hot-applied (no full gateway restart):
 - `cron` (cron service restart + concurrency update)
 - `agent.heartbeat` (heartbeat runner restart)
 - `web` (WhatsApp web provider restart)
-- `telegram`, `discord`, `signal`, `imessage` (provider restarts)
+- `telegram`, `discord`, `rocketchat`, `signal`, `imessage` (provider restarts)
 - `agent`, `models`, `routing`, `messages`, `session`, `whatsapp`, `logging`, `skills`, `ui`, `talk`, `identity`, `wizard` (dynamic reads)
 
 Requires full Gateway restart:
@@ -1581,6 +1643,8 @@ Defaults:
         sessionKey: "hook:gmail:{{messages[0].id}}",
         messageTemplate:
           "From: {{messages[0].from}}\nSubject: {{messages[0].subject}}\n{{messages[0].snippet}}",
+        deliver: true,
+        provider: "last",
       },
     ],
   }
@@ -1604,6 +1668,8 @@ Mapping notes:
 - `match.source` matches a payload field (e.g. `{ source: "gmail" }`) so you can use a generic `/hooks/ingest` path.
 - Templates like `{{messages[0].subject}}` read from the payload.
 - `transform` can point to a JS/TS module that returns a hook action.
+- `deliver: true` sends the final reply to a provider; `provider` defaults to `last` (falls back to WhatsApp).
+- If there is no prior delivery route, set `provider` + `to` explicitly (required for Telegram/Discord/Slack/Signal/iMessage).
 
 Gmail helper config (used by `clawdbot hooks gmail setup` / `run`):
 
@@ -1738,7 +1804,7 @@ Template placeholders are expanded in `routing.transcribeAudio.command` (and any
 | `{{GroupMembers}}` | Group members preview (best effort) |
 | `{{SenderName}}` | Sender display name (best effort) |
 | `{{SenderE164}}` | Sender phone number (best effort) |
-| `{{Provider}}` | Provider hint (whatsapp|telegram|discord|imessage|webchat|…) |
+| `{{Provider}}` | Provider hint (whatsapp|telegram|discord|rocketchat|imessage|webchat|…) |
 
 ## Cron (Gateway scheduler)
 

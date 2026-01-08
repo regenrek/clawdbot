@@ -10,6 +10,7 @@ import {
   defaultSlackActions,
   type DiscordForm,
   type IMessageForm,
+  type RocketChatForm,
   type SignalForm,
   type SlackForm,
   type TelegramForm,
@@ -64,6 +65,28 @@ const baseSlackForm: SlackForm = {
   channels: [],
 };
 
+const baseRocketChatForm: RocketChatForm = {
+  enabled: true,
+  baseUrl: "",
+  authToken: "",
+  userId: "",
+  botUsername: "",
+  alias: "",
+  avatarUrl: "",
+  emoji: "",
+  dmPolicy: "pairing",
+  allowFrom: "",
+  groupPolicy: "open",
+  requireMention: true,
+  rooms: "",
+  textChunkLimit: "",
+  mediaMaxMb: "",
+  webhookToken: "",
+  webhookHost: "",
+  webhookPort: "",
+  webhookPath: "",
+};
+
 const baseSignalForm: SignalForm = {
   enabled: true,
   account: "",
@@ -112,11 +135,13 @@ function createState(): ConfigState {
     telegramForm: { ...baseTelegramForm },
     discordForm: { ...baseDiscordForm },
     slackForm: { ...baseSlackForm },
+    rocketchatForm: { ...baseRocketChatForm },
     signalForm: { ...baseSignalForm },
     imessageForm: { ...baseIMessageForm },
     telegramConfigStatus: null,
     discordConfigStatus: null,
     slackConfigStatus: null,
+    rocketchatConfigStatus: null,
     signalConfigStatus: null,
     imessageConfigStatus: null,
   };

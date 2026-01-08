@@ -12,6 +12,7 @@ import {
   type DiscordGuildChannelForm,
   type DiscordGuildForm,
   type IMessageForm,
+  type RocketChatForm,
   type SlackChannelForm,
   type SlackForm,
   type SignalForm,
@@ -38,11 +39,13 @@ export type ConfigState = {
   telegramForm: TelegramForm;
   discordForm: DiscordForm;
   slackForm: SlackForm;
+  rocketchatForm: RocketChatForm;
   signalForm: SignalForm;
   imessageForm: IMessageForm;
   telegramConfigStatus: string | null;
   discordConfigStatus: string | null;
   slackConfigStatus: string | null;
+  rocketchatConfigStatus: string | null;
   signalConfigStatus: string | null;
   imessageConfigStatus: string | null;
 };
@@ -101,6 +104,7 @@ export function applyConfigSnapshot(state: ConfigState, snapshot: ConfigSnapshot
   const telegram = (config.telegram ?? {}) as Record<string, unknown>;
   const discord = (config.discord ?? {}) as Record<string, unknown>;
   const slack = (config.slack ?? {}) as Record<string, unknown>;
+  const rocketchat = (config.rocketchat ?? {}) as Record<string, unknown>;
   const signal = (config.signal ?? {}) as Record<string, unknown>;
   const imessage = (config.imessage ?? {}) as Record<string, unknown>;
   const toList = (value: unknown) =>
@@ -323,6 +327,77 @@ export function applyConfigSnapshot(state: ConfigState, snapshot: ConfigSnapshot
         : [],
   };
 
+  const rocketchatWebhook =
+    rocketchat.webhook && typeof rocketchat.webhook === "object"
+      ? (rocketchat.webhook as Record<string, unknown>)
+      : {};
+  const rocketchatRooms =
+    rocketchat.rooms && typeof rocketchat.rooms === "object"
+      ? (rocketchat.rooms as Record<string, unknown>)
+      : {};
+  const rocketchatRoomList = Object.entries(rocketchatRooms)
+    .filter(([key, value]) => {
+      if (!key) return false;
+      if (value && typeof value === "object") {
+        const entry = value as Record<string, unknown>;
+        if (typeof entry.allow === "boolean") return entry.allow;
+        if (typeof entry.enabled === "boolean") return entry.enabled;
+      }
+      return true;
+    })
+    .map(([key]) => key)
+    .join(", ");
+  const rocketchatDmPolicy =
+    rocketchat.dmPolicy === "allowlist" ||
+    rocketchat.dmPolicy === "open" ||
+    rocketchat.dmPolicy === "disabled"
+      ? rocketchat.dmPolicy
+      : "pairing";
+  const rocketchatGroupPolicy =
+    rocketchat.groupPolicy === "allowlist" ||
+    rocketchat.groupPolicy === "disabled"
+      ? rocketchat.groupPolicy
+      : "open";
+  state.rocketchatForm = {
+    enabled: typeof rocketchat.enabled === "boolean" ? rocketchat.enabled : true,
+    baseUrl: typeof rocketchat.baseUrl === "string" ? rocketchat.baseUrl : "",
+    authToken:
+      typeof rocketchat.authToken === "string" ? rocketchat.authToken : "",
+    userId: typeof rocketchat.userId === "string" ? rocketchat.userId : "",
+    botUsername:
+      typeof rocketchat.botUsername === "string" ? rocketchat.botUsername : "",
+    alias: typeof rocketchat.alias === "string" ? rocketchat.alias : "",
+    avatarUrl:
+      typeof rocketchat.avatarUrl === "string" ? rocketchat.avatarUrl : "",
+    emoji: typeof rocketchat.emoji === "string" ? rocketchat.emoji : "",
+    dmPolicy: rocketchatDmPolicy,
+    allowFrom: toList(rocketchat.allowFrom),
+    groupPolicy: rocketchatGroupPolicy,
+    requireMention:
+      typeof rocketchat.requireMention === "boolean"
+        ? rocketchat.requireMention
+        : true,
+    rooms: rocketchatRoomList,
+    textChunkLimit:
+      typeof rocketchat.textChunkLimit === "number"
+        ? String(rocketchat.textChunkLimit)
+        : "",
+    mediaMaxMb:
+      typeof rocketchat.mediaMaxMb === "number"
+        ? String(rocketchat.mediaMaxMb)
+        : "",
+    webhookToken:
+      typeof rocketchatWebhook.token === "string" ? rocketchatWebhook.token : "",
+    webhookHost:
+      typeof rocketchatWebhook.host === "string" ? rocketchatWebhook.host : "",
+    webhookPort:
+      typeof rocketchatWebhook.port === "number"
+        ? String(rocketchatWebhook.port)
+        : "",
+    webhookPath:
+      typeof rocketchatWebhook.path === "string" ? rocketchatWebhook.path : "",
+  };
+
   state.signalForm = {
     enabled: typeof signal.enabled === "boolean" ? signal.enabled : true,
     account: typeof signal.account === "string" ? signal.account : "",
@@ -370,6 +445,7 @@ export function applyConfigSnapshot(state: ConfigState, snapshot: ConfigSnapshot
   state.telegramConfigStatus = configInvalid;
   state.discordConfigStatus = configInvalid;
   state.slackConfigStatus = configInvalid;
+  state.rocketchatConfigStatus = configInvalid;
   state.signalConfigStatus = configInvalid;
   state.imessageConfigStatus = configInvalid;
 

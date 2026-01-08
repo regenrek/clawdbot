@@ -282,6 +282,15 @@ export async function statusCommand(
         : `Discord: failed (${health.discord.probe?.status ?? "unknown"})${health.discord.probe?.error ? ` - ${health.discord.probe.error}` : ""}`
       : info("Discord: not configured");
     runtime.log(discordLine);
+
+    const rocketchatLine = health.rocketchat.configured
+      ? health.rocketchat.probe?.ok
+        ? info(
+            `Rocket.Chat: ok${health.rocketchat.probe.user?.username ? ` (@${health.rocketchat.probe.user.username})` : ""} (${health.rocketchat.probe.elapsedMs}ms)`,
+          )
+        : `Rocket.Chat: failed (${health.rocketchat.probe?.status ?? "unknown"})${health.rocketchat.probe?.error ? ` - ${health.rocketchat.probe.error}` : ""}`
+      : info("Rocket.Chat: not configured");
+    runtime.log(rocketchatLine);
   } else {
     runtime.log(info("Provider probes: skipped (use --deep)"));
   }

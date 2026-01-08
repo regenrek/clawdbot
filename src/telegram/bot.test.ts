@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as replyModule from "../auto-reply/reply.js";
-import { createTelegramBot } from "./bot.js";
+import { createTelegramBot, getTelegramSequentialKey } from "./bot.js";
+import { resolveTelegramFetch } from "./fetch.js";
 
 const { loadWebMedia } = vi.hoisted(() => ({
   loadWebMedia: vi.fn(),
@@ -44,6 +45,7 @@ const middlewareUseSpy = vi.fn();
 const onSpy = vi.fn();
 const stopSpy = vi.fn();
 const commandSpy = vi.fn();
+const botCtorSpy = vi.fn();
 const sendChatActionSpy = vi.fn();
 const setMessageReactionSpy = vi.fn(async () => undefined);
 const setMyCommandsSpy = vi.fn(async () => undefined);
@@ -76,7 +78,12 @@ vi.mock("grammy", () => ({
     on = onSpy;
     stop = stopSpy;
     command = commandSpy;
-    constructor(public token: string) {}
+    constructor(
+      public token: string,
+      public options?: { client?: { fetch?: typeof fetch } },
+    ) {
+      botCtorSpy(token, options);
+    }
   },
   InputFile: class {},
   webhookCallback: vi.fn(),
@@ -118,6 +125,7 @@ describe("createTelegramBot", () => {
     setMyCommandsSpy.mockReset();
     middlewareUseSpy.mockReset();
     sequentializeSpy.mockReset();
+    botCtorSpy.mockReset();
     sequentializeKey = undefined;
   });
 
@@ -127,25 +135,72 @@ describe("createTelegramBot", () => {
     expect(useSpy).toHaveBeenCalledWith("throttler");
   });
 
+  it("forces native fetch only under Bun", () => {
+    const originalFetch = globalThis.fetch;
+    const originalBun = (globalThis as { Bun?: unknown }).Bun;
+    const fetchSpy = vi.fn() as unknown as typeof fetch;
+    globalThis.fetch = fetchSpy;
+    try {
+      (globalThis as { Bun?: unknown }).Bun = {};
+      createTelegramBot({ token: "tok" });
+      const fetchImpl = resolveTelegramFetch();
+      expect(fetchImpl).toBe(fetchSpy);
+      expect(botCtorSpy).toHaveBeenCalledWith(
+        "tok",
+        expect.objectContaining({
+          client: expect.objectContaining({ fetch: fetchSpy }),
+        }),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalBun === undefined) {
+        delete (globalThis as { Bun?: unknown }).Bun;
+      } else {
+        (globalThis as { Bun?: unknown }).Bun = originalBun;
+      }
+    }
+  });
+
+  it("does not force native fetch on Node", () => {
+    const originalFetch = globalThis.fetch;
+    const originalBun = (globalThis as { Bun?: unknown }).Bun;
+    const fetchSpy = vi.fn() as unknown as typeof fetch;
+    globalThis.fetch = fetchSpy;
+    try {
+      if (originalBun !== undefined) {
+        delete (globalThis as { Bun?: unknown }).Bun;
+      }
+      createTelegramBot({ token: "tok" });
+      const fetchImpl = resolveTelegramFetch();
+      expect(fetchImpl).toBeUndefined();
+      expect(botCtorSpy).toHaveBeenCalledWith("tok", undefined);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalBun === undefined) {
+        delete (globalThis as { Bun?: unknown }).Bun;
+      } else {
+        (globalThis as { Bun?: unknown }).Bun = originalBun;
+      }
+    }
+  });
+
   it("sequentializes updates by chat and thread", () => {
     createTelegramBot({ token: "tok" });
     expect(sequentializeSpy).toHaveBeenCalledTimes(1);
     expect(middlewareUseSpy).toHaveBeenCalledWith(
       sequentializeSpy.mock.results[0]?.value,
     );
-    expect(sequentializeKey).toBeDefined();
+    expect(sequentializeKey).toBe(getTelegramSequentialKey);
+    expect(getTelegramSequentialKey({ message: { chat: { id: 123 } } })).toBe(
+      "telegram:123",
+    );
     expect(
-      sequentializeKey?.({
-        message: { chat: { id: 123 } },
-      }),
-    ).toBe("telegram:123");
-    expect(
-      sequentializeKey?.({
+      getTelegramSequentialKey({
         message: { chat: { id: 123 }, message_thread_id: 9 },
       }),
     ).toBe("telegram:123:topic:9");
     expect(
-      sequentializeKey?.({
+      getTelegramSequentialKey({
         update: { message: { chat: { id: 555 } } },
       }),
     ).toBe("telegram:555");

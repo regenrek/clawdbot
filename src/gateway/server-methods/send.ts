@@ -2,6 +2,7 @@ import { loadConfig } from "../../config/config.js";
 import { sendMessageDiscord, sendPollDiscord } from "../../discord/index.js";
 import { shouldLogVerbose } from "../../globals.js";
 import { sendMessageIMessage } from "../../imessage/index.js";
+import { sendMessageRocketChat } from "../../rocketchat/send.js";
 import { sendMessageSignal } from "../../signal/index.js";
 import { sendMessageSlack } from "../../slack/send.js";
 import { sendMessageTelegram } from "../../telegram/send.js";
@@ -99,6 +100,22 @@ export const sendHandlers: GatewayRequestHandlers = {
           runId: idem,
           messageId: result.messageId,
           channelId: result.channelId,
+          provider,
+        };
+        context.dedupe.set(`send:${idem}`, {
+          ts: Date.now(),
+          ok: true,
+          payload,
+        });
+        respond(true, payload, undefined, { provider });
+      } else if (provider === "rocketchat") {
+        const result = await sendMessageRocketChat(to, message, {
+          mediaUrl: request.mediaUrl,
+        });
+        const payload = {
+          runId: idem,
+          messageId: result.messageId,
+          roomId: result.roomId,
           provider,
         };
         context.dedupe.set(`send:${idem}`, {
